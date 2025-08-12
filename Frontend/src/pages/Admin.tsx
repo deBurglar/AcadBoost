@@ -1,3 +1,5 @@
+import AdminHeader from "../components/Admin/Header";
+
 export default function Admin(){
-    return(<>Admin</>)
+    return(<><AdminHeader/></>)
 }
