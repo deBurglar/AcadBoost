@@ -33,32 +33,45 @@ const createRoom = async (req,res) => {
 }
 
 
-const createTimeTable = async (req,res) =>{
+const createTimeTable = async (req, res) => {
+    const rooms = await Room.find({}).select("name type");
+    const courses = await Course.find({ year: 2 }).select("subjectcode year faculty isLab name");
+    const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
+    const START_HOUR = 9;
+    const END_HOUR = 17;
+    const BREAK_HOUR = 12;
 
-
-const rooms = await Room.find({}).select("name type")
-const courses = await Course.find({}).select("subjectcode year faculty")
-const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
-const START_HOUR = 9;
-const END_HOUR = 17;
-const BREAK_HOUR = 12;
-
-function generateTimeSlots() {
-    const slots = [];
-    for (let hour = START_HOUR; hour < END_HOUR; hour++) {
-        if (hour === BREAK_HOUR) continue; // Skip break
-        slots.push(`${hour}:00`);
+    // Generate time slots
+    function generateTimeSlots() {
+        const slots = [];
+        for (let hour = START_HOUR; hour < END_HOUR; hour++) {
+            if (hour === BREAK_HOUR) continue; // Skip break
+            slots.push(`${hour}:00`);
+        }
+        return slots;
     }
-    return slots;
-}
 
-function solveTimetable(courses, rooms) {
     const timeSlots = generateTimeSlots();
     const timetable = [];
     const teacherSchedule = {};
     const roomSchedule = {};
     const studentLabDays = {}; // year -> set of days with lab
     const yearLoad = {}; // year -> { Mon: count, Tue: count, ... }
+
+    // Check DB if room is free across ALL departments
+    async function isRoomFreeAcrossDepartments(roomId, day, timeArray) {
+        // Check if ANY department already has the room booked on that day & time
+        const conflict = await Department.findOne({
+            "routine": {
+                $elemMatch: {
+                    room: roomId,
+                    day: day,
+                    time: { $in: timeArray } // one of the times overlaps
+                }
+            }
+        });
+        return !conflict; // true if no conflict found
+    }
 
     function isValidLecture(day, time, room, teacher) {
         return !teacherSchedule[teacher]?.[day]?.has(time) &&
@@ -68,8 +81,7 @@ function solveTimetable(courses, rooms) {
     function isValidLab(day, startIndex, room, teacher) {
         if (startIndex + 2 >= timeSlots.length) return false; // Need 3 consecutive slots
         const labSlots = timeSlots.slice(startIndex, startIndex + 3);
-        // Cannot cross break or be interrupted
-        if (labSlots.length < 3) return false;
+        if (labSlots.length < 3) return false; // Ensure not crossing break
         for (let slot of labSlots) {
             if (teacherSchedule[teacher]?.[day]?.has(slot)) return false;
             if (roomSchedule[room]?.[day]?.has(slot)) return false;
@@ -87,7 +99,6 @@ function solveTimetable(courses, rooms) {
             teacherSchedule[teacher][day].add(slot);
             roomSchedule[room][day].add(slot);
         }
-        // Update load
         yearLoad[course.year] = yearLoad[course.year] || {};
         yearLoad[course.year][day] = (yearLoad[course.year][day] || 0) + 1;
     }
@@ -101,7 +112,7 @@ function solveTimetable(courses, rooms) {
         yearLoad[course.year][day]--;
     }
 
-    function placeCourse(index) {
+    async function placeCourse(index) {
         if (index === courses.length) return true;
 
         const course = courses[index];
@@ -114,7 +125,7 @@ function solveTimetable(courses, rooms) {
         });
 
         for (let day of sortedDays) {
-            // Lab: ensure only one per day per year
+            // Lab: only one per day per year
             if (course.isLab && studentLabDays[course.year]?.has(day)) continue;
 
             for (let room of rooms) {
@@ -123,26 +134,28 @@ function solveTimetable(courses, rooms) {
 
                 for (let teacher of course.faculty) {
                     if (course.isLab) {
-                        // Try placing lab in any start slot
                         for (let startIndex = 0; startIndex < timeSlots.length; startIndex++) {
-                            if (isValidLab(day, startIndex, room.name, teacher)) {
-                                const labSlots = timeSlots.slice(startIndex, startIndex + 3);
+                            const labSlots = timeSlots.slice(startIndex, startIndex + 3);
+                            if (isValidLab(day, startIndex, room.name, teacher) &&
+                                await isRoomFreeAcrossDepartments(room._id, day, labSlots)) {
+
                                 reserveSlots(course, day, labSlots, room.name, teacher);
                                 studentLabDays[course.year] = studentLabDays[course.year] || new Set();
                                 studentLabDays[course.year].add(day);
 
-                                if (placeCourse(index + 1)) return true;
+                                if (await placeCourse(index + 1)) return true;
 
                                 studentLabDays[course.year].delete(day);
                                 releaseSlots(course, day, labSlots, room.name, teacher);
                             }
                         }
                     } else {
-                        // Lecture
                         for (let time of timeSlots) {
-                            if (isValidLecture(day, time, room.name, teacher)) {
+                            if (isValidLecture(day, time, room.name, teacher) &&
+                                await isRoomFreeAcrossDepartments(room._id, day, [time])) {
+
                                 reserveSlots(course, day, [time], room.name, teacher);
-                                if (placeCourse(index + 1)) return true;
+                                if (await placeCourse(index + 1)) return true;
                                 releaseSlots(course, day, [time], room.name, teacher);
                             }
                         }
@@ -153,15 +166,26 @@ function solveTimetable(courses, rooms) {
         return false;
     }
 
-    if (placeCourse(0)) return timetable;
+    if (await placeCourse(0)) {
+        console.log(timetable);
+        const routineEntries = timetable.map(entry => ({
+        course: entry.courseId, // store ObjectId here
+        room: entry.roomId,     // store ObjectId here
+        time: Array.isArray(entry.time) ? entry.time.join(",") : entry.time,
+        day: entry.day
+    }));
+    await Department.updateOne(
+        { _id: req.params.deptId }, // department to update
+        { $set: { routine: routineEntries } }
+    );
+
+
+     return res.json({ message: "Timetable generated & saved!\n", timetable });
+    }
+
     throw new Error("No valid timetable found.");
-}
+};
 
-
-
-console.log(solveTimetable(courses, rooms));
-
-}
 
 // const createDepartment = async (req,res) => {
 //     try{
