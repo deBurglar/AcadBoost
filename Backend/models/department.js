@@ -24,6 +24,11 @@ const departmentSchema = Schema({
             ref:'room',
             required:true
         },
+        faculty:{
+            type:Schema.Types.ObjectId,
+            ref:'user',
+            required:true
+        },
         time:{
             type:String,
             required:true

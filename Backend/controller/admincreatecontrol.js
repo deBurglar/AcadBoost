@@ -3,6 +3,8 @@ const Department = require("../models/department")
 const Room = require("../models/room")
 const User = require('../models/user')
 const mongoose = require("mongoose")
+
+
 const createCourse = async (req,res) => {
     try{
         req.body.createdby=req.result._id
@@ -253,7 +255,6 @@ async function createDepartmentTimetable(req, res) {
     return res.status(500).json({ error: "Internal Server Error" });
   }
 }
-
 
 
 const createDepartment = async (req,res) => {
