@@ -257,6 +257,100 @@ async function createDepartmentTimetable(req, res) {
 }
 
 
+// creating this function 
+const publishRoutine = async (req, res) => {
+  try {
+    const { deptId } = req.params;
+
+    // Accept both shapes: { timetable: {...} } or raw object
+    const timetable = req.body?.timetable ?? req.body;
+    if (!timetable || typeof timetable !== 'object') {
+      return res.status(400).json({ message: "Invalid timetable payload" });
+    }
+
+    // Collect unique names (skip TBA)
+    const subjectSet = new Set();
+    const facultySet = new Set();
+    const roomSet = new Set();
+
+    for (const [day, slots] of Object.entries(timetable)) {
+      if (!slots || typeof slots !== 'object') continue;
+      for (const [time, { subject, faculty, room } = {}] of Object.entries(slots)) {
+        if (subject && subject !== 'TBA') subjectSet.add(subject.trim());
+        if (faculty && faculty !== 'TBA') facultySet.add(faculty.trim());
+        if (room && room !== 'TBA') roomSet.add(room.trim());
+      }
+    }
+
+    // Bulk fetch once per collection
+    const [courses, faculties, rooms] = await Promise.all([
+      Course.find({ name: { $in: Array.from(subjectSet) } }).select('_id name subjectcode'),
+      User.find({ name: { $in: Array.from(facultySet) }, role: 'faculty' }).select('_id name'),
+      Room.find({ name: { $in: Array.from(roomSet) } }).select('_id name')
+    ]);
+
+    // Build case-insensitive maps
+    const key = s => s.trim().toLowerCase();
+    const courseMap  = new Map(courses.map(c  => [key(c.name), c._id]));
+    const facultyMap = new Map(faculties.map(f => [key(f.name), f._id]));
+    const roomMap    = new Map(rooms.map(r    => [key(r.name), r._id]));
+
+    // Transform timetable → routine[]
+    const routine = [];
+    const unmatched = { subjects: new Set(), faculty: new Set(), rooms: new Set() };
+
+    for (const [day, slots] of Object.entries(timetable)) {
+      for (const [time, details] of Object.entries(slots)) {
+        const subj = details?.subject?.trim();
+        const fac  = details?.faculty?.trim();
+        const rm   = details?.room?.trim();
+
+        const courseId  = (!subj || subj === 'TBA') ? null : (courseMap.get(key(subj)) ?? null);
+        const facultyId = (!fac  || fac  === 'TBA') ? null : (facultyMap.get(key(fac)) ?? null);
+        const roomId    = (!rm   || rm   === 'TBA') ? null : (roomMap.get(key(rm))   ?? null);
+
+        if (subj && subj !== 'TBA' && !courseId)  unmatched.subjects.add(subj);
+        if (fac  && fac  !== 'TBA' && !facultyId) unmatched.faculty.add(fac);
+        if (rm   && rm   !== 'TBA' && !roomId)    unmatched.rooms.add(rm);
+
+        routine.push({ course: courseId, faculty: facultyId, room: roomId, time, day });
+      }
+    }
+
+    // Save (PATCH)
+    const updated = await Department.findByIdAndUpdate(
+      deptId,
+      { $set: { routine } },
+      { new: true, runValidators: true }
+    );
+
+    if (!updated) return res.status(404).json({ message: "Department not found" });
+
+    res.status(200).json({
+      message: "Timetable updated successfully",
+      counts: {
+        totalSlots: routine.length,
+        matched: {
+          courses: courses.length,
+          faculty: faculties.length,
+          rooms: rooms.length
+        }
+      },
+      unmatched: {
+        subjects: Array.from(unmatched.subjects),
+        faculty:  Array.from(unmatched.faculty),
+        rooms:    Array.from(unmatched.rooms)
+      },
+      routine: updated.routine
+    });
+  } catch (err) {
+    console.error("Error publishing timetable:", err);
+    res.status(500).json({ message: "Failed to publish timetable", error: err?.message });
+  }
+};
+
+
+
 const createDepartment = async (req,res) => {
     try{
         
@@ -272,4 +366,4 @@ const createDepartment = async (req,res) => {
     }
 }
 
-module.exports = {createCourse,createRoom,createDepartmentTimetable,createDepartment}
+module.exports = {createCourse,createRoom,createDepartmentTimetable,createDepartment,publishRoutine}

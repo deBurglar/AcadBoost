@@ -1,4 +1,7 @@
-const Department = require('../models/department'); // your department model
+const Department = require('../models/department');
+const Attendance = require('../models/attendance');
+
+
 
 // Controller to get faculty-course assignments
 const getFacultyAssignmentsbyCourse = async (req, res) => {
@@ -93,6 +96,74 @@ const getAssignmentsByFaculty = async (req, res) => {
 };
 
 
+// Get student attendance department wise
+const getAttendanceByDepartment = async (req, res) => {
+  try {
+    // Populate student, their department, and course info
+    const records = await Attendance.find()
+      .populate({
+        path: 'student',
+        select: 'name emailId studentProfile',
+        populate: {
+          path: 'studentProfile.department',
+          select: 'name code year'
+        }
+      })
+      .populate({
+        path: 'course',
+        select: 'name subjectcode'
+      });
+
+    // Group by department
+    const departmentMap = {};
+
+    records.forEach(record => {
+      const dept = record.student?.studentProfile?.department;
+      if (!dept) return; // Skip if no department assigned
+
+      const deptId = dept._id.toString();
+
+      if (!departmentMap[deptId]) {
+        departmentMap[deptId] = {
+          departmentName: dept.name,
+          departmentCode: dept.code,
+          year: dept.year,
+          students: {}
+        };
+      }
+
+      const studentId = record.student._id.toString();
+      if (!departmentMap[deptId].students[studentId]) {
+        departmentMap[deptId].students[studentId] = {
+          studentName: record.student.name,
+          studentEmail: record.student.emailId,
+          rollNumber: record.student.studentProfile.rollNumber,
+          attendance: []
+        };
+      }
+
+      // Push attendance record
+      departmentMap[deptId].students[studentId].attendance.push({
+        courseName: record.course.name,
+        courseCode: record.course.subjectcode,
+        date: record.createdAt // From timestamps
+      });
+    });
+
+    // Convert map to array & students object to array
+    const result = Object.values(departmentMap).map(dept => ({
+      ...dept,
+      students: Object.values(dept.students)
+    }));
+
+    res.status(200).json(result);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Failed to fetch attendance" });
+  }
+};
 
 
-module.exports = { getFacultyAssignmentsbyCourse ,getAssignmentsByFaculty};
+
+module.exports = { getFacultyAssignmentsbyCourse ,getAssignmentsByFaculty,getAttendanceByDepartment};

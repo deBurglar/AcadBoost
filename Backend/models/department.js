@@ -15,19 +15,19 @@ const departmentSchema = Schema({
     routine:[ 
     {
         course:{
-            type: Schema.Types.ObjectId,
+            type: String,
             ref: 'course',
-            required:true
+            default:null
         },
         room:{
             type:Schema.Types.ObjectId,
             ref:'room',
-            required:true
+            default:null
         },
         faculty:{
             type:Schema.Types.ObjectId,
             ref:'user',
-            required:true
+            default:null
         },
         time:{
             type:String,
