@@ -32,7 +32,6 @@ const createRoom = async (req,res) => {
     }
 }
 
-
 async function createDepartmentTimetable(req, res) {
   try {
     const deptIdObj = new mongoose.Types.ObjectId(req.params.deptId);
@@ -45,12 +44,21 @@ async function createDepartmentTimetable(req, res) {
       return res.status(404).json({ message: "No courses found for this department" });
     }
 
+    // Helper to format timetable cell
+    const makeCell = (course) => ({
+      subject: course.name,
+      faculty: (course.faculty && course.faculty.length > 0)
+        ? (course.faculty[0].name || "TBA")
+        : "TBA",
+      room: "TBA" // filled later by allocation step
+    });
+
     // 2) Config — exclude 12:00 entirely so lunch can't be used
     const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
     const HOURS = [9, 10, 11, 13, 14, 15, 16]; // no 12:00
     const HOUR_TO_KEY = h => `${h}:00`;
 
-    // Build timetable map: day -> "HH:00" -> null | courseName
+    // Build timetable map: day -> "HH:00" -> null | {subject, faculty, room}
     const timetable = {};
     const dayLoad = {}; // for balancing
     for (const day of DAYS) {
@@ -100,7 +108,9 @@ async function createDepartmentTimetable(req, res) {
 
     // Helper: does a day already contain this course?
     function dayHasCourse(day, courseName) {
-      return Object.values(timetable[day]).includes(courseName);
+      return Object.values(timetable[day]).some(
+        cell => cell && cell.subject === courseName
+      );
     }
 
     // 6) Place each requested session (expanded list)
@@ -131,7 +141,7 @@ async function createDepartmentTimetable(req, res) {
                 areFacultyFree(day, slots, course.faculty)) {
 
               // Reserve
-              for (const s of slots) timetable[day][s] = course.name;
+              for (const s of slots) timetable[day][s] = makeCell(course);
               reserveFaculty(day, slots, course.faculty);
               labTakenDay.add(day);
               dayLoad[day] += 3;
@@ -146,7 +156,7 @@ async function createDepartmentTimetable(req, res) {
             if (timetable[day][slotKey] === null &&
                 areFacultyFree(day, [slotKey], course.faculty)) {
 
-              timetable[day][slotKey] = course.name;
+              timetable[day][slotKey] = makeCell(course);
               reserveFaculty(day, [slotKey], course.faculty);
               dayLoad[day] += 1;
               placed = true;
@@ -160,6 +170,82 @@ async function createDepartmentTimetable(req, res) {
       // If not placed, we silently skip (week may be too full or conflicts too tight)
     }
 
+    // ===== 7) ROOM ALLOCATION (new) =====
+    // Build quick metadata by course name to know isLab flag during allocation
+    const courseMeta = new Map(courses.map(c => [c.name, { isLab: !!c.isLab }]));
+
+    // Preload rooms and existing routines (to avoid cross-dept double booking)
+    const [rooms, allDeptRoutines] = await Promise.all([
+      Room.find({}).lean(),
+      Department.find({}, "routine").lean()
+    ]);
+
+    // Normalize existing bookings across departments: occupied[day][time] -> Set(roomId)
+    const occupied = {};
+    for (const day of DAYS) occupied[day] = {};
+    const addOcc = (day, time, roomId) => {
+      if (!occupied[day][time]) occupied[day][time] = new Set();
+      occupied[day][time].add(roomId.toString());
+    };
+
+    for (const d of allDeptRoutines) {
+      const routine = d.routine || [];
+      for (const r of routine) {
+        const times = (r.time || "").split(",").map(t => t.trim()).filter(Boolean);
+        for (const t of times) {
+          addOcc(r.day, t, r.room);
+        }
+      }
+    }
+
+    // Also avoid double booking within THIS generated timetable
+    // (mark as we allocate)
+    const canUseRoom = (room, day, time) => {
+      const set = occupied[day][time];
+      return !(set && set.has(room._id.toString()));
+    };
+    const markRoom = (room, day, time) => addOcc(day, time, room._id);
+
+    // Helper: consider room eligible for lab vs lecture
+    const isEligibleRoom = (room, isLab) => {
+      const type = (room.type || "").toLowerCase();
+      if (isLab) return type === "lab";
+      // For lectures, accept anything that is NOT an explicit lab
+      return type !== "lab";
+    };
+
+    // Allocate rooms
+    for (const day of DAYS) {
+      for (const time of Object.keys(timetable[day])) {
+        let cell = timetable[day][time];
+
+        // Fill missing or null cells safely to avoid .subject errors
+        if (!cell || typeof cell !== "object") {
+          timetable[day][time] = { subject: "TBA", faculty: "TBA", room: "TBA" };
+          continue;
+        }
+
+        // If there's no real class, ensure room = TBA and continue
+        if (!cell.subject || cell.subject === "TBA") {
+          cell.room = "TBA";
+          continue;
+        }
+
+        // Determine if this is a lab from course meta
+        const isLab = !!(courseMeta.get(cell.subject)?.isLab);
+
+        // Try to find first eligible & free room
+        const candidate = rooms.find(r => isEligibleRoom(r, isLab) && canUseRoom(r, day, time));
+
+        if (candidate) {
+          cell.room = candidate.name;
+          markRoom(candidate, day, time);
+        } else {
+          cell.room = "TBA";
+        }
+      }
+    }
+
     return res.json({ departmentId: deptIdObj, timetable });
 
   } catch (error) {
@@ -167,6 +253,7 @@ async function createDepartmentTimetable(req, res) {
     return res.status(500).json({ error: "Internal Server Error" });
   }
 }
+
 
 
 const createDepartment = async (req,res) => {
