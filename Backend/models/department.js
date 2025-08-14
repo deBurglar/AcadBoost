@@ -9,6 +9,9 @@ const departmentSchema = Schema({
     year:{
         type:Number,
     },
+    code:{
+        type:String,
+    },
     routine:[ 
     {
         course:{
@@ -30,7 +33,11 @@ const departmentSchema = Schema({
             required:true
         }
     }
-    ]
+    ],
+    createdby:{
+        type:Schema.Types.ObjectId,
+        ref:"user"
+    }
 },{
     timestamps:true
 })

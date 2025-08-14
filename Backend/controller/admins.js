@@ -2,7 +2,7 @@ const Course = require("../models/courses")
 const Department = require("../models/department")
 const Room = require("../models/room")
 const User = require('../models/user')
-
+const mongoose = require("mongoose")
 const createCourse = async (req,res) => {
     try{
         req.body.createdby=req.result._id
@@ -33,174 +33,155 @@ const createRoom = async (req,res) => {
 }
 
 
-const createTimeTable = async (req, res) => {
-    const rooms = await Room.find({}).select("name type");
-    const courses = await Course.find({ year: 2 }).select("subjectcode year faculty isLab name");
-    const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
-    const START_HOUR = 9;
-    const END_HOUR = 17;
-    const BREAK_HOUR = 12;
+async function createDepartmentTimetable(req, res) {
+  try {
+    const deptIdObj = new mongoose.Types.ObjectId(req.params.deptId);
 
-    // Generate time slots
-    function generateTimeSlots() {
-        const slots = [];
-        for (let hour = START_HOUR; hour < END_HOUR; hour++) {
-            if (hour === BREAK_HOUR) continue; // Skip break
-            slots.push(`${hour}:00`);
-        }
-        return slots;
+    // 1) Fetch courses & faculty
+    const courses = await Course.find({ department: { $in: [deptIdObj] } })
+      .populate("faculty");
+
+    if (!courses.length) {
+      return res.status(404).json({ message: "No courses found for this department" });
     }
 
-    const timeSlots = generateTimeSlots();
-    const timetable = [];
-    const teacherSchedule = {};
-    const roomSchedule = {};
-    const studentLabDays = {}; // year -> set of days with lab
-    const yearLoad = {}; // year -> { Mon: count, Tue: count, ... }
+    // 2) Config — exclude 12:00 entirely so lunch can't be used
+    const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+    const HOURS = [9, 10, 11, 13, 14, 15, 16]; // no 12:00
+    const HOUR_TO_KEY = h => `${h}:00`;
 
-    // Check DB if room is free across ALL departments
-    async function isRoomFreeAcrossDepartments(roomId, day, timeArray) {
-        // Check if ANY department already has the room booked on that day & time
-        const conflict = await Department.findOne({
-            "routine": {
-                $elemMatch: {
-                    room: roomId,
-                    day: day,
-                    time: { $in: timeArray } // one of the times overlaps
-                }
+    // Build timetable map: day -> "HH:00" -> null | courseName
+    const timetable = {};
+    const dayLoad = {}; // for balancing
+    for (const day of DAYS) {
+      timetable[day] = {};
+      dayLoad[day] = 0;
+      for (const h of HOURS) timetable[day][HOUR_TO_KEY(h)] = null;
+    }
+
+    // 3) Expand courses to enforce frequency = 3 for lectures, 1 for labs
+    let expanded = [];
+    for (const c of courses) {
+      const freq = c.isLab ? 1 : 3;
+      for (let i = 0; i < freq; i++) expanded.push(c);
+    }
+    // Shuffle for fairness
+    expanded.sort(() => Math.random() - 0.5);
+
+    // 4) Faculty-bookings PER SLOT (so they can teach multiple periods on same day, just not same time)
+    // facultyBooked[day][slotKey] = Set(facultyId)
+    const facultyBooked = {};
+    for (const d of DAYS) facultyBooked[d] = {};
+
+    function areFacultyFree(day, slotKeys, facultyArr) {
+      if (!facultyArr || facultyArr.length === 0) return true;
+      const ids = facultyArr.map(f => f._id.toString());
+      for (const key of slotKeys) {
+        const bookedSet = facultyBooked[day][key];
+        if (!bookedSet) continue;
+        for (const id of ids) {
+          if (bookedSet.has(id)) return false;
+        }
+      }
+      return true;
+    }
+
+    function reserveFaculty(day, slotKeys, facultyArr) {
+      if (!facultyArr || facultyArr.length === 0) return;
+      const ids = facultyArr.map(f => f._id.toString());
+      for (const key of slotKeys) {
+        if (!facultyBooked[day][key]) facultyBooked[day][key] = new Set();
+        for (const id of ids) facultyBooked[day][key].add(id);
+      }
+    }
+
+    // 5) Only one lab per day (department-wide)
+    const labTakenDay = new Set();
+
+    // Helper: does a day already contain this course?
+    function dayHasCourse(day, courseName) {
+      return Object.values(timetable[day]).includes(courseName);
+    }
+
+    // 6) Place each requested session (expanded list)
+    for (const course of expanded) {
+      const isLab = !!course.isLab;
+      let placed = false;
+
+      // Balance across days by trying lower-load days first
+      const candidateDays = [...DAYS].sort((a, b) => dayLoad[a] - dayLoad[b]);
+
+      for (const day of candidateDays) {
+        // Avoid duplicate same-course same-day (for nicer spread)
+        if (!isLab && dayHasCourse(day, course.name)) continue;
+
+        if (isLab) {
+          // Only one lab per day in the department
+          if (labTakenDay.has(day)) continue;
+
+          // Find true *consecutive-hour* triplets: (h, h+1, h+2) present in HOURS
+          for (let i = 0; i <= HOURS.length - 3; i++) {
+            const h1 = HOURS[i], h2 = HOURS[i + 1], h3 = HOURS[i + 2];
+            // Ensure numeric consecutiveness (prevents 11 → 13 jump over lunch)
+            if (!(h2 === h1 + 1 && h3 === h2 + 1)) continue;
+
+            const slots = [HOUR_TO_KEY(h1), HOUR_TO_KEY(h2), HOUR_TO_KEY(h3)];
+            // all three empty?
+            if (slots.every(s => timetable[day][s] === null) &&
+                areFacultyFree(day, slots, course.faculty)) {
+
+              // Reserve
+              for (const s of slots) timetable[day][s] = course.name;
+              reserveFaculty(day, slots, course.faculty);
+              labTakenDay.add(day);
+              dayLoad[day] += 3;
+              placed = true;
+              break;
             }
-        });
-        return !conflict; // true if no conflict found
-    }
+          }
+        } else {
+          // Lecture: place in any free single slot
+          const slotOrder = Object.keys(timetable[day]); // already excludes lunch
+          for (const slotKey of slotOrder) {
+            if (timetable[day][slotKey] === null &&
+                areFacultyFree(day, [slotKey], course.faculty)) {
 
-    function isValidLecture(day, time, room, teacher) {
-        return !teacherSchedule[teacher]?.[day]?.has(time) &&
-               !roomSchedule[room]?.[day]?.has(time);
-    }
-
-    function isValidLab(day, startIndex, room, teacher) {
-        if (startIndex + 2 >= timeSlots.length) return false; // Need 3 consecutive slots
-        const labSlots = timeSlots.slice(startIndex, startIndex + 3);
-        if (labSlots.length < 3) return false; // Ensure not crossing break
-        for (let slot of labSlots) {
-            if (teacherSchedule[teacher]?.[day]?.has(slot)) return false;
-            if (roomSchedule[room]?.[day]?.has(slot)) return false;
-        }
-        return true;
-    }
-
-    function reserveSlots(course, day, slots, room, teacher) {
-        timetable.push({ course: course.name, teacher, room, day, time: slots });
-        teacherSchedule[teacher] = teacherSchedule[teacher] || {};
-        roomSchedule[room] = roomSchedule[room] || {};
-        teacherSchedule[teacher][day] = teacherSchedule[teacher][day] || new Set();
-        roomSchedule[room][day] = roomSchedule[room][day] || new Set();
-        for (let slot of slots) {
-            teacherSchedule[teacher][day].add(slot);
-            roomSchedule[room][day].add(slot);
-        }
-        yearLoad[course.year] = yearLoad[course.year] || {};
-        yearLoad[course.year][day] = (yearLoad[course.year][day] || 0) + 1;
-    }
-
-    function releaseSlots(course, day, slots, room, teacher) {
-        timetable.pop();
-        for (let slot of slots) {
-            teacherSchedule[teacher][day].delete(slot);
-            roomSchedule[room][day].delete(slot);
-        }
-        yearLoad[course.year][day]--;
-    }
-
-    async function placeCourse(index) {
-        if (index === courses.length) return true;
-
-        const course = courses[index];
-
-        // Sort days to balance load
-        const sortedDays = [...DAYS].sort((a, b) => {
-            const loadA = yearLoad[course.year]?.[a] || 0;
-            const loadB = yearLoad[course.year]?.[b] || 0;
-            return loadA - loadB;
-        });
-
-        for (let day of sortedDays) {
-            // Lab: only one per day per year
-            if (course.isLab && studentLabDays[course.year]?.has(day)) continue;
-
-            for (let room of rooms) {
-                if (course.isLab && room.type !== "lab") continue;
-                if (!course.isLab && room.type === "lab") continue;
-
-                for (let teacher of course.faculty) {
-                    if (course.isLab) {
-                        for (let startIndex = 0; startIndex < timeSlots.length; startIndex++) {
-                            const labSlots = timeSlots.slice(startIndex, startIndex + 3);
-                            if (isValidLab(day, startIndex, room.name, teacher) &&
-                                await isRoomFreeAcrossDepartments(room._id, day, labSlots)) {
-
-                                reserveSlots(course, day, labSlots, room.name, teacher);
-                                studentLabDays[course.year] = studentLabDays[course.year] || new Set();
-                                studentLabDays[course.year].add(day);
-
-                                if (await placeCourse(index + 1)) return true;
-
-                                studentLabDays[course.year].delete(day);
-                                releaseSlots(course, day, labSlots, room.name, teacher);
-                            }
-                        }
-                    } else {
-                        for (let time of timeSlots) {
-                            if (isValidLecture(day, time, room.name, teacher) &&
-                                await isRoomFreeAcrossDepartments(room._id, day, [time])) {
-
-                                reserveSlots(course, day, [time], room.name, teacher);
-                                if (await placeCourse(index + 1)) return true;
-                                releaseSlots(course, day, [time], room.name, teacher);
-                            }
-                        }
-                    }
-                }
+              timetable[day][slotKey] = course.name;
+              reserveFaculty(day, [slotKey], course.faculty);
+              dayLoad[day] += 1;
+              placed = true;
+              break;
             }
+          }
         }
-        return false;
+
+        if (placed) break;
+      }
+      // If not placed, we silently skip (week may be too full or conflicts too tight)
     }
 
-    if (await placeCourse(0)) {
-        console.log(timetable);
-        const routineEntries = timetable.map(entry => ({
-        course: entry.courseId, // store ObjectId here
-        room: entry.roomId,     // store ObjectId here
-        time: Array.isArray(entry.time) ? entry.time.join(",") : entry.time,
-        day: entry.day
-    }));
-    await Department.updateOne(
-        { _id: req.params.deptId }, // department to update
-        { $set: { routine: routineEntries } }
-    );
+    return res.json({ departmentId: deptIdObj, timetable });
+
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
+}
 
 
-     return res.json({ message: "Timetable generated & saved!\n", timetable });
-    }
-
-    throw new Error("No valid timetable found.");
-};
-
-
-// const createDepartment = async (req,res) => {
-//     try{
-//         const rooms = Room.find({})
-//         const course = Course.find({role:"faculty"})
-//         req.body.createdby=req.result._id
-//         const department = await Department.create(req.body)
-//         res.status(201).json({
-//             success: true,
-//             message: "department created successfully",
-//             data: course
-//         });
-//     }catch(error){
+const createDepartment = async (req,res) => {
+    try{
         
-//     }
-// }
+        req.body.createdby=req.result._id
+        const department = await Department.create(req.body)
+        res.status(201).json({
+            success: true,
+            message: "department created successfully",
+            department,
+        });
+    }catch(error){
+        
+    }
+}
 
-module.exports = {createCourse,createRoom,createTimeTable}
+module.exports = {createCourse,createRoom,createDepartmentTimetable,createDepartment}

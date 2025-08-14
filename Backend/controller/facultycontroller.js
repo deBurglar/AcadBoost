@@ -257,3 +257,5 @@ async function getFacultyAttendanceReport(req,res) {
 
 
 // get the info of low attendes
+
+module.exports = {getFacultyScheduleGrouped,getFacultyDailyAttendance,getFacultyAttendanceReport}
