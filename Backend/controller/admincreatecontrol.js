@@ -15,7 +15,8 @@ const createCourse = async (req,res) => {
             data: course
         });
     }catch(error){
-        
+        console.error(error);
+    return res.status(500).json({ error: "Internal Server Error" });
     }
 }
 
@@ -30,7 +31,8 @@ const createRoom = async (req,res) => {
             data: room
         });
     }catch(error){
-        
+        console.error(error);
+    return res.status(500).json({ error: "Internal Server Error" });
     }
 }
 
@@ -186,6 +188,8 @@ async function createDepartmentTimetable(req, res) {
     const occupied = {};
     for (const day of DAYS) occupied[day] = {};
     const addOcc = (day, time, roomId) => {
+      if (!roomId) return;
+      if (!occupied[day]) occupied[day] = {};   
       if (!occupied[day][time]) occupied[day][time] = new Set();
       occupied[day][time].add(roomId.toString());
     };
@@ -193,7 +197,9 @@ async function createDepartmentTimetable(req, res) {
     for (const d of allDeptRoutines) {
       const routine = d.routine || [];
       for (const r of routine) {
+        if (!DAYS.includes(r.day)) continue;
         const times = (r.time || "").split(",").map(t => t.trim()).filter(Boolean);
+        if (!r.room) continue;
         for (const t of times) {
           addOcc(r.day, t, r.room);
         }
@@ -252,7 +258,7 @@ async function createDepartmentTimetable(req, res) {
 
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: "Internal Server Error" });
+    return res.status(500).json({ error: "Internal Server Error " +error.message });
   }
 }
 
@@ -362,7 +368,8 @@ const createDepartment = async (req,res) => {
             department,
         });
     }catch(error){
-        
+        console.error(error);
+    return res.status(500).json({ error: "Internal Server Error" });
     }
 }
 

@@ -13,6 +13,7 @@ const courseSchema = new Schema({
     },
     subjectcode:{
         type:String,
+        unique:true
     },
     year:{
         type:Number
