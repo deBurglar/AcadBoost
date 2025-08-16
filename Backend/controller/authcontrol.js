@@ -77,7 +77,7 @@ const login = async (req, res) => {
     if (!emailId || !password) throw new Error("Incomplete Credentials");
 
     // Select password and nested deviceId
-    const user = await User.findOne({ emailId }).select("+password studentProfile.deviceId");
+    const user = await User.findOne({ emailId })
     if (!user) throw new Error("User not found");
 
     const match = await bcrypt.compare(password, user.password);

@@ -1,15 +1,14 @@
 
-const Department = require("./models/department");
-const Attendance = require("./models/attendance");
-const Course = require("./models/course");
+const Department = require("../models/department");
+const Attendance = require("../models/attendance");
+const User = require("../models/user")
+const Course = require("../models/courses");
 //------------- core objectives------------------
 
 //  see his own schedules
-
-
 async function getFacultyScheduleGrouped(req,res) {
     try {
-        const facultyId = req.body
+        const facultyId = req.result._id
         // Find all departments with populated routine
         const departments = await Department.find({
             "routine.course": { $exists: true }
@@ -86,7 +85,6 @@ async function getFacultyScheduleGrouped(req,res) {
 }
 
 // see his class attendance strength
-
 async function getFacultyDailyAttendance(req,res) {
     try {
 
@@ -224,7 +222,7 @@ async function getFacultyAttendanceReport(req,res) {
 // const report = await getFacultyAttendanceReport("facultyIdHere", startDate, endDate);
 // console.log(report);
 
-
+// sample outpurt=
 // [
 //   {
 //     "courseId": "64ff2a...",
@@ -254,8 +252,63 @@ async function getFacultyAttendanceReport(req,res) {
 
 // take attendance
 
+const takeAttendance = async (req, res) => {
+  try {
+    const facultyId = req.result._id; // from auth middleware
+    const { courseId, presentStudents } = req.body; 
+    // presentStudents = [ObjectId, ObjectId, ...]
+
+    // ✅ Verify faculty teaches this course
+    const course = await Course.findOne({ _id: courseId, faculty: facultyId });
+    if (!course) {
+      return res.status(403).json({ error: "You are not assigned to this course" });
+    }
+
+    // ✅ Remove duplicates
+    const uniquePresent = [...new Set(presentStudents)];
+
+    // ✅ Insert attendance for each student
+    const attendanceDocs = uniquePresent.map(studentId => ({
+      student: studentId,
+      course: courseId
+    }));
+
+    await Attendance.insertMany(attendanceDocs);
+
+    res.json({ message: "Attendance marked successfully", count: attendanceDocs.length });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+
+// get info of this students by course
+const studentinmycourse = async (req, res) => {
+  try {
+    const facultyId = req.result._id
+    const courseId = req.params.courseId;
+
+    // check if faculty teaches this course
+    const course = await Course.findOne({ _id: courseId, faculty: facultyId }).populate("department");
+    if (!course) {
+      return res.status(403).json({ error: "You are not assigned to this course" });
+    }
+
+    // fetch students from the same department & year
+    const students = await User.find({
+      role: "student",
+      "studentProfile.department": { $in: course.department },
+      "studentProfile.year": course.year
+    }).select("name emailId studentProfile");
+
+    res.json({ course: course.name, students });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
 
 
 // get the info of low attendes
 
-module.exports = {getFacultyScheduleGrouped,getFacultyDailyAttendance,getFacultyAttendanceReport}
+module.exports = {getFacultyScheduleGrouped,getFacultyDailyAttendance,getFacultyAttendanceReport,studentinmycourse,takeAttendance}

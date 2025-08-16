@@ -6,7 +6,8 @@ require("dotenv").config()
 const authRouter = require('./routes/authRoutes')
 const main = require("./database/maindb")
 const redisClient = require("./database/redis")
-const adminRouter = require('./routes/adminRoutes')
+const adminRouter = require('./routes/adminRoutes');
+const facultyRouter = require('./routes/facultyroutes');
 
 
 app.use(cors({
@@ -19,6 +20,7 @@ app.use(express.json())
 app.use(cookieParser());
 app.use("/auth",authRouter);
 app.use('/admin',adminRouter)
+app.use('/faculty',facultyRouter)
 
 const InitializeConnection = async()=>{
     try {

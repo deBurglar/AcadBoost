@@ -25,6 +25,10 @@ const userSchema = new Schema({
         enum:['student','admin','faculty'],
         default: 'student'
     },
+    gender:{
+        type:String,
+        enum:['male','female']
+    },
     studentProfile: {
         rollNumber: {
             type:Number,
