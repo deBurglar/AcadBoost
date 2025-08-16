@@ -26,12 +26,16 @@ const userSchema = new Schema({
         default: 'student'
     },
     studentProfile: {
-        rollNumber: Number,
+        rollNumber: {
+            type:Number,
+            unique:true
+        },
         year: Number,
         department:{ 
             type:Schema.Types.ObjectId,
             ref:'department'
-        }
+        },
+        deviceId: { type: String }
     },
     facultyProfile: {
         shortName:{
