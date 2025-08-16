@@ -1,5 +1,8 @@
-import AdminHeader from "../components/Admin/Header";
 
 export default function Admin(){
-    return(<><AdminHeader/></>)
+    return(
+    <>
+    
+    <h1>Admin Controls</h1>
+    </>)
 }

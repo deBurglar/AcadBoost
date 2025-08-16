@@ -33,7 +33,7 @@ export default function AdminHeader()
             </div>
             <div className="flex items-center space-x-4">
               <Button variant="ghost">
-                { `Prof., ${user.name}` }
+                { ` ${user.name}` }
               </Button>
               <Button className="bg-gradient-to-r from-red-600 to-red-400 hover:from-red-700 hover:to-red-500" onClick={handleLogout}>
                 Logout

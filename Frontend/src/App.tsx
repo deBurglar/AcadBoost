@@ -10,6 +10,11 @@ import AcademicManagementSystem from './pages/Home'
 import Student from './pages/Student'
 import Faculty from './pages/Faculty'
 import Admin from './pages/Admin'
+import Layout from './components/Admin/Layout';
+import Create from './components/Admin/create';
+import Analyse from './components/Admin/anaysis';
+import Attendance from './components/FacultyPage/attendance';
+import FacultyLayout from "./components/FacultyPage/FacultyLayout"
 function App() {
 
 const { isAuthenticated, user } = useSelector(
@@ -25,66 +30,39 @@ const { isAuthenticated, user } = useSelector(
     <>
     <BrowserRouter>
       <Routes>
-        <Route
-  path="/"
-  element={
-    isAuthenticated ? (
-      user?.role === "student" ? (
-        <Navigate to="/student" />
-      ) : user?.role === "faculty" ? (
-        <Navigate to="/faculty" />
-      ) : user?.role === "admin" ? (
-        <Navigate to="/admin" />
-      ) : (
-        <AcademicManagementSystem />
-      )
-    ) : (
-     <AcademicManagementSystem/>
-    )
-  }
-/>
+
+        {/* Landing Page */}
+        <Route path="/" element={isAuthenticated ? (
+      user?.role === "student" ? (<Navigate to="/student" />) : user?.role === "faculty" ? (<Navigate to="/faculty" />) : user?.role === "admin" ? (<Navigate to="/admin" />
+      ) : (<AcademicManagementSystem />)
+    ) : (<AcademicManagementSystem/>)}/>
 
 
         {/* Student page */}
-        <Route
-          path="/student"
-          element={
-            isAuthenticated && user?.role === "student" ? (
-              <Student />
-            ) : (
-              <Navigate to="/" />
-            )
-          }
-        />
+        <Route path="/student" element={isAuthenticated && user?.role === "student" ? (<Student />) : (<Navigate to="/" />)}/>
 
         {/* Faculty page */}
-        <Route
-          path="/faculty"
-          element={
-            isAuthenticated && user?.role === "faculty" ? (
-              <Faculty />
-            ) : (
-              <Navigate to="/" />
-            )
-          }
-        />
+        {isAuthenticated && user?.role === 'faculty' ? (
+      <Route path="/faculty" element={<FacultyLayout/>}>
+        <Route index element={<Faculty />} />
+        <Route path="attendance" element={<Attendance />} />
+      </Route>
+    ) : (
+      <Route path="/faculty/*" element={<Navigate to="/" />} />
+    )}
 
-        <Route
-          path="/admin"
-          element={
-            isAuthenticated && user?.role === "admin" ? (
-              <Admin />
-            ) : (
-              <Navigate to="/" />
-            )
-          }
-        />
+        {/* Admin page */}
+        {isAuthenticated && user?.role === 'admin' ? (
+      <Route path="/admin" element={<Layout/>}>
+        <Route index element={<Admin />} />
+        <Route path="create" element={<Create />} />
+        <Route path="analysis" element={<Analyse />} />
+      </Route>
+    ) : (
+      <Route path="/admin/*" element={<Navigate to="/" />} />
+    )}
 
-        <Route path="/"
-          element={
-            isAuthenticated ? <Navigate to="/" /> : <AcademicManagementSystem />
-          }
-        />
+  
       </Routes>
     </BrowserRouter>
     </>
