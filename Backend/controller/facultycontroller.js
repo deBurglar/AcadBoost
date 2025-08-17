@@ -276,11 +276,17 @@ async function getFacultyLastAttendance(req, res) {
       }
 
       // 3) Count total students in the department of this course
-      const totalStudents = await User.countDocuments({
-        role: "student",
-        "studentProfile.department": course.department._id
-      });
+      let totalStudents = 0;
 
+      if (course.department && course.department.length > 0) {
+        // Sum students from all departments
+        for (const dept of course.department) {
+          totalStudents += await User.countDocuments({
+            role: "student",
+            "studentProfile.department": dept._id
+          });
+        }
+      }
       result.push({
         courseId: course._id,
         courseName: course.name,
