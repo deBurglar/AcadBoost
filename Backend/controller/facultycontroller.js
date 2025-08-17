@@ -246,7 +246,56 @@ async function getFacultyAttendanceReport(req,res) {
 //   }
 // ]
 
+async function getFacultyLastAttendance(req, res) {
+  try {
+    const facultyId = req.result._id;
 
+    // 1) Get all courses taught by this faculty
+    const courses = await Course.find({ faculty: facultyId }).populate("department");
+
+    const result = [];
+
+    for (const course of courses) {
+      // 2) Find the latest attendance record for this course
+      const lastRecord = await Attendance.findOne({ course: course._id })
+        .sort({ createdAt: -1 }); // newest first
+
+      let lastAttendance = null;
+
+      if (lastRecord) {
+        // Count how many students were present in that session
+        const presentCount = await Attendance.countDocuments({
+          course: course._id,
+          createdAt: lastRecord.createdAt
+        });
+
+        lastAttendance = {
+          date: lastRecord.createdAt,
+          presentCount
+        };
+      }
+
+      // 3) Count total students in the department of this course
+      const totalStudents = await User.countDocuments({
+        role: "student",
+        "studentProfile.department": course.department._id
+      });
+
+      result.push({
+        courseId: course._id,
+        courseName: course.name,
+        departmentName: course.department.name,
+        totalStudents,
+        lastAttendance
+      });
+    }
+
+    res.json(result);
+  } catch (err) {
+    console.error("Error fetching faculty last attendance:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+}
 
 
 
@@ -308,7 +357,23 @@ const studentinmycourse = async (req, res) => {
   }
 };
 
+//faculty courses
+const getMyCourses = async (req, res) => {
+  try {
+    const facultyId = req.result._id; // current logged-in faculty
+    
+    const courses = await Course.find({ faculty: facultyId })
+      .populate("department","name year") // optional if you want department details
+      .exec();
 
+    return res.status(200).json({ courses });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+};
 // get the info of low attendes
 
-module.exports = {getFacultyScheduleGrouped,getFacultyDailyAttendance,getFacultyAttendanceReport,studentinmycourse,takeAttendance}
+module.exports = {getFacultyScheduleGrouped,getFacultyDailyAttendance,getFacultyAttendanceReport,
+    studentinmycourse,takeAttendance,getMyCourses,
+    getFacultyLastAttendance
+}

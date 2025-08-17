@@ -19,7 +19,7 @@ const FacultySidebar = () => {
     <li key={item.path}>
       <Link
         to={item.path}
-        className={`flex items-center gap-2 px-4 py-2 rounded hover:bg-green-900 ${
+        className={`flex items-center gap-2 px-4 py-2 rounded hover:bg-green-200 ${
           pathname === item.path ? 'bg-green-500 text-white' : 'text-gray-400'
         }`}
       >

@@ -1,6 +1,6 @@
 const express = require('express')
 const authmidware = require('../middleware/authmidware')
-const { getFacultyScheduleGrouped, studentinmycourse, takeAttendance } = require('../controller/facultycontroller')
+const { getFacultyScheduleGrouped, studentinmycourse, takeAttendance, getMyCourses, getFacultyLastAttendance } = require('../controller/facultycontroller')
 const facultyRouter = express.Router()
 
 // get student by course
@@ -13,6 +13,9 @@ facultyRouter.get('/schedule',authmidware,getFacultyScheduleGrouped)
 
 // faculty attendance report for a date range
 
+// faculty last class attendance
+facultyRouter.get('/last_attendance_report',authmidware,getFacultyLastAttendance)
 
-
+// faculty courses
+facultyRouter.get('/mycourses',authmidware,getMyCourses)
 module.exports = facultyRouter

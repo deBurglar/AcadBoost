@@ -19,7 +19,7 @@ const Sidebar = () => {
     <li key={item.path}>
       <Link
         to={item.path}
-        className={`flex items-center gap-2 px-4 py-2 rounded hover:bg-blue-900 ${
+        className={`flex items-center gap-2 px-4 py-2 rounded hover:bg-blue-200 ${
           pathname === item.path ? 'bg-blue-500 text-white' : 'text-gray-400'
         }`}
       >

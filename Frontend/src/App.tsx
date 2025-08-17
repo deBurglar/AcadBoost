@@ -15,6 +15,7 @@ import Create from './components/Admin/create';
 import Analyse from './components/Admin/anaysis';
 import Attendance from './components/FacultyPage/attendance';
 import FacultyLayout from "./components/FacultyPage/FacultyLayout"
+import Courses from './components/FacultyPage/courses';
 function App() {
 
 const { isAuthenticated, user } = useSelector(
@@ -46,6 +47,7 @@ const { isAuthenticated, user } = useSelector(
       <Route path="/faculty" element={<FacultyLayout/>}>
         <Route index element={<Faculty />} />
         <Route path="attendance" element={<Attendance />} />
+        <Route path="attendance/courses" element={<Courses />} />
       </Route>
     ) : (
       <Route path="/faculty/*" element={<Navigate to="/" />} />
