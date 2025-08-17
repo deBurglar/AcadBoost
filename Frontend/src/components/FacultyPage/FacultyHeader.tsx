@@ -19,11 +19,11 @@ export default function FacultyHeader()
         }
 
     return(
-<header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
+<header className="border-b bg-white/60 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
+              <div className="w-10 h-10 bg-gradient-to-br from-green-600 to-green-800 rounded-lg flex items-center justify-center">
                 <GraduationCap className="w-6 h-6 text-white" />
               </div>
               <div>
@@ -32,7 +32,7 @@ export default function FacultyHeader()
               </div>
             </div>
             <div className="flex items-center space-x-4">
-              <Button variant="ghost">
+              <Button variant="ghost" className="hover:bg-green-100">
                 { `Prof., ${user.name}` }
               </Button>
               <Button className="bg-gradient-to-r from-red-600 to-red-400 hover:from-red-700 hover:to-red-500" onClick={handleLogout}>

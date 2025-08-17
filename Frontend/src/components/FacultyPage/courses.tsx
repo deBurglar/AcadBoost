@@ -71,7 +71,7 @@ export default function Courses() {
 
           return (
             <Card key={course._id} className="border-0 shadow-lg">
-              <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-800 px-4 py-3 rounded-2xl text-white">
+              <CardHeader className="bg-gradient-to-br from-yellow-300 to-indigo-300 px-4 py-3 rounded-2xl text-white">
                 <CardTitle>{course.name}</CardTitle>
                 <CardDescription>
                   {course.subjectcode} • Year {course.year}
@@ -83,17 +83,17 @@ export default function Courses() {
                 )}
 
                 {att?.lastAttendance ? (
-                  <div className="p-4 bg-blue-50 rounded-lg">
+                  <div className="p-4 bg-yellow-50 rounded-lg">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-medium">{att.courseName}</span>
-                      <Badge className="bg-blue-100 text-blue-700">
+                      <Badge className="bg-yellow-100 text-yellow-700">
                         {att.lastAttendance.presentCount} present
                         out of {att.totalStudents}
                       </Badge>
                     </div>
                     <div className="w-full bg-blue-200 rounded-full h-2">
                       <div
-                        className="bg-blue-600 h-2 rounded-full"
+                        className="bg-yellow-600 h-2 rounded-full"
                         style={{
                           width: att.totalStudents
                             ? `${(att.lastAttendance.presentCount / att.totalStudents) * 100}%`
@@ -121,7 +121,7 @@ export default function Courses() {
 
           return (
             <Card key={course._id} className="border-0 shadow-lg">
-              <CardHeader className="bg-gradient-to-r from-green-600 to-emerald-700 px-4 py-3 rounded-2xl text-white">
+              <CardHeader className="bg-gradient-to-r from-red-200 to-pink-400 px-4 py-3 rounded-2xl text-white">
                 <CardTitle>{course.name}</CardTitle>
                 <CardDescription>
                   {course.subjectcode} • Year {course.year}

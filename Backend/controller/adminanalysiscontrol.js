@@ -1,7 +1,42 @@
 const Department = require('../models/department');
 const Attendance = require('../models/attendance');
+const User = require('../models/user');
+
+const getDepartments = async (req, res) => {
+  try {
+    const departments = await Department.find({});
+    return res.status(200).json({
+      success: true,
+      data: departments,
+    });
+  } catch (error) {
+    console.error("Error fetching departments:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
+};
 
 
+const getFaculties = async (req, res) => {
+  try {
+    // only users with role = faculty
+    const faculties = await User.find({ role: "faculty" })
+      .select("_id name emailId facultyProfile");
+
+    return res.status(200).json({
+      success: true,
+      data: faculties,
+    });
+  } catch (error) {
+    console.error("Error fetching faculties:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
+};
 
 // Controller to get faculty-course assignments
 const getFacultyAssignmentsbyCourse = async (req, res) => {
@@ -166,4 +201,4 @@ const getAttendanceByDepartment = async (req, res) => {
 
 
 
-module.exports = { getFacultyAssignmentsbyCourse ,getAssignmentsByFaculty,getAttendanceByDepartment};
+module.exports = { getFacultyAssignmentsbyCourse ,getAssignmentsByFaculty,getAttendanceByDepartment,getFaculties,getDepartments};

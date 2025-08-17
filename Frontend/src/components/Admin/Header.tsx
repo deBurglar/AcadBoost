@@ -23,7 +23,7 @@ export default function AdminHeader()
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-blue-800 rounded-lg flex items-center justify-center">
                 <GraduationCap className="w-6 h-6 text-white" />
               </div>
               <div>
@@ -32,7 +32,7 @@ export default function AdminHeader()
               </div>
             </div>
             <div className="flex items-center space-x-4">
-              <Button variant="ghost">
+              <Button variant="ghost" className="hover:bg-blue-100">
                 { ` ${user.name}` }
               </Button>
               <Button className="bg-gradient-to-r from-red-600 to-red-400 hover:from-red-700 hover:to-red-500" onClick={handleLogout}>

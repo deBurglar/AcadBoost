@@ -10,7 +10,7 @@ const FacultySidebar = () => {
   ];
 
   return (
-    <div className="w-64 h-screen shadow-md border-r p-4 fixed top-20    left-0 z-50">
+    <div className="w-64 h-screen shadow-md border-r p-4 fixed top-20 bg-green-50 left-0 z-50">
       <h2 className="text-2xl font-bold mb-6 flex items-center text-base-content"><LayoutDashboard/>Faculty Panel</h2>
       <ul className="space-y-4">
         {menu.map((item) => {

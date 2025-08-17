@@ -1,7 +1,7 @@
 const express = require('express')
 const adminRouter = express.Router()
 const {createCourse, createDepartment, createRoom, createDepartmentTimetable,publishRoutine} = require('../controller/admincreatecontrol')
-const {getFacultyAssignmentsbyCourse,getAssignmentsByFaculty} = require("../controller/adminanalysiscontrol")
+const {getFacultyAssignmentsbyCourse,getAssignmentsByFaculty, getFaculties, getDepartments} = require("../controller/adminanalysiscontrol")
 const authmidware = require('../middleware/authmidware')
 
 
@@ -11,7 +11,8 @@ adminRouter.get('/createtimetable/:deptId',authmidware,createDepartmentTimetable
 adminRouter.put("/publish/:deptId",authmidware,publishRoutine)
 adminRouter.post('/createroom',authmidware,createRoom)
 
-
+adminRouter.get('/getdepartments',authmidware,getDepartments)
+adminRouter.get('/getfaculties',authmidware,getFaculties)
 // analusis
 
 adminRouter.post("/course_analyse",authmidware,getFacultyAssignmentsbyCourse)
