@@ -18,7 +18,52 @@ const getDepartments = async (req, res) => {
   }
 };
 
+const getDepartmentTimetable = async (req, res) => {
+  try {
+    const { deptId } = req.params;
 
+    // Validate deptId
+    if (!deptId) {
+      return res.status(400).json({ message: "Department ID is required" });
+    }
+
+    // Fetch department with populated timetable
+    const department = await Department.findById(deptId)
+      .populate({
+        path: "routine.course", // populate course
+        model: "course",
+        select: "name subjectcode isLab"
+      })
+      .populate({
+        path: "routine.room", // populate room
+        model: "room",
+        select: "name capacity type"
+      })
+      .populate({
+        path: "routine.faculty", // populate faculty
+        model: "user",
+        select: "name"
+      });
+
+    if (!department) {
+      return res.status(404).json({ message: "Department not found" });
+    }
+
+    res.status(200).json({
+      success: "Timetable fetched successfully",
+      department: {
+        name: department.name,
+        year: department.year,
+        code: department.code,
+        timetable: department.routine
+      }
+    });
+
+  } catch (error) {
+    console.error("Error fetching timetable:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
 const getFaculties = async (req, res) => {
   try {
     // only users with role = faculty
@@ -201,4 +246,4 @@ const getAttendanceByDepartment = async (req, res) => {
 
 
 
-module.exports = { getFacultyAssignmentsbyCourse ,getAssignmentsByFaculty,getAttendanceByDepartment,getFaculties,getDepartments};
+module.exports = { getFacultyAssignmentsbyCourse ,getAssignmentsByFaculty,getAttendanceByDepartment,getFaculties,getDepartments,getDepartmentTimetable};
