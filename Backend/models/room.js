@@ -5,10 +5,12 @@ const {Schema} = mongoose
 const roomSchema = Schema({
     name:{
         type:String,
-        required:true
+        required:true,
+        unique:true
     },
     type:{
         type:String,
+        enum:['Lecture',"Lab"]
     },
     capacity:{
         type:Number,

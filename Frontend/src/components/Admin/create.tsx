@@ -211,17 +211,36 @@ export default function CreatePage() {
                 <Input type="text" name="name" value={roomData.name} onChange={(e) => handleChange(e, "room")} required />
               </div>
               <div>
-                <Label>Type</Label>
-                <Input type="text" name="type" value={roomData.type} onChange={(e) => handleChange(e, "room")} />
-              </div>
+  <Label>Type</Label>
+  <select
+    name="type"
+    value={roomData.type}
+    onChange={(e) => handleChange(e, "room")}
+    className="w-full border rounded-lg p-2"
+  >
+    <option value="">Select Type</option>
+    <option value="Lecture">Lecture</option>
+    <option value="Lab">Lab</option>
+  </select>
+</div>
               <div>
                 <Label>Capacity</Label>
                 <Input type="number" name="capacity" value={roomData.capacity} onChange={(e) => handleChange(e, "room")} />
               </div>
               <div>
-                <Label>Building</Label>
-                <Input type="text" name="building" value={roomData.building} onChange={(e) => handleChange(e, "room")} />
-              </div>
+  <Label>Building</Label>
+  <select
+    name="building"
+    value={roomData.building}
+    onChange={(e) => handleChange(e, "room")}
+    className="w-full border rounded-lg p-2"
+  >
+    <option value="">Select Building</option>
+    <option value="Civil Mechanical Electrical">Civil Mechanical Electrical Building</option>
+    <option value="Information and Communication Technology">Information and Communication Technology Building</option>
+    <option value="Central Block">Central Block Building</option>
+  </select>
+</div>
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? "Creating..." : "Create Room"}
               </Button>
