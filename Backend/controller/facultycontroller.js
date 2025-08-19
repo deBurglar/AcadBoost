@@ -18,7 +18,7 @@ async function getFacultyScheduleGrouped(req, res) {
         path: "routine.course",
         model: "course",
         match: { faculty: facultyId }, // only match this faculty's courses
-        select: "_id name subjectcode year department faculty", // ✅ include _id + dept
+        select: "_id name subjectcode year department faculty",
         populate: [
           {
             path: "faculty",
@@ -52,11 +52,11 @@ async function getFacultyScheduleGrouped(req, res) {
         if (entry.course && entry.course._id) {
           const classInfo = {
             department: entry.course.department?.name || dept.name,
-            departmentId: entry.course.department?._id || dept._id, // ✅ added
+            departmentId: entry.course.department?._id || dept._id,
             year: entry.course.year || dept.year,
             course: entry.course.subjectcode || entry.course.name,
             courseName: entry.course.name,
-            courseId: entry.course._id, // ✅ added
+            courseId: entry.course._id,
             room: entry.room?.name,
             roomType: entry.room?.type,
             time: entry.time

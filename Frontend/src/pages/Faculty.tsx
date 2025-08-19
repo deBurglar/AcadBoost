@@ -117,7 +117,7 @@ function FacultySchedule() {
         <Button
           size="sm"
           // disabled={!inSlot}
-          onClick={() => navigate(`/attendance/take/${item.course}`)}
+          onClick={() => navigate(`/attendance/take/${item.departmentId}`)}
         >
           Take Attendance
         </Button>
