@@ -1,6 +1,7 @@
 const Department = require('../models/department');
 const Attendance = require('../models/attendance');
 const User = require('../models/user');
+const Room = require('../models/room');
 
 const getDepartments = async (req, res) => {
   try {
@@ -82,6 +83,23 @@ const getFaculties = async (req, res) => {
     });
   }
 };
+
+const getRooms = async (req, res) => {
+  try {
+    const room = await Room.find({});
+    return res.status(200).json({
+      success: true,
+      data: room,
+    });
+  } catch (error) {
+    console.error("Error fetching rooms:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
+};
+
 
 // Controller to get faculty-course assignments
 const getFacultyAssignmentsbyCourse = async (req, res) => {
@@ -246,4 +264,4 @@ const getAttendanceByDepartment = async (req, res) => {
 
 
 
-module.exports = { getFacultyAssignmentsbyCourse ,getAssignmentsByFaculty,getAttendanceByDepartment,getFaculties,getDepartments,getDepartmentTimetable};
+module.exports = { getFacultyAssignmentsbyCourse ,getAssignmentsByFaculty,getAttendanceByDepartment,getFaculties,getDepartments,getDepartmentTimetable,getRooms};

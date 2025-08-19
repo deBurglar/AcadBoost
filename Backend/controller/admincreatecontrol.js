@@ -263,6 +263,73 @@ async function createDepartmentTimetable(req, res) {
 }
 
 
+function flattenTimetable(timetableObj) {
+  const routine = [];
+  for (const day in timetableObj) {
+    for (const time in timetableObj[day]) {
+      const cell = timetableObj[day][time];
+      if (!cell) continue;
+
+      // Ignore TBA slots
+      if (cell.subject === "TBA") continue;
+
+      routine.push({
+        day,
+        time,
+        subject: cell.subject,
+        faculty: cell.faculty,
+        room: cell.room
+      });
+    }
+  }
+  return routine;
+}
+async function conflict(req,res) {
+  const {deptId} = req.params
+
+  const newRoutine = flattenTimetable(req.body)
+  // Fetch all other departments' routines (with faculty + room populated)
+  const otherDepts = await Department.find({ _id: { $ne: deptId } })
+    .populate("routine.faculty", "name")
+    .populate("routine.room", "name")
+    .lean();
+
+  for (const entry of newRoutine) {
+    const { day, time, faculty, room } = entry;
+
+    for (const dept of otherDepts) {
+      const deptRoutine = dept.routine || [];
+      for (const r of deptRoutine) {
+        if (r.day !== day) continue;
+        const times = (r.time || "").split(",").map(t => t.trim());
+
+        if (!times.includes(time)) continue;
+
+        // --- Check Room Conflict ---
+        if (room && r.room && room.toString() === r.room.toString()) {
+          res.json ({
+            ok: false,
+            conflictWith: dept._id,
+            message: `Room conflict with department ${dept._id} in room ${r.room.name} at ${day} ${time}`
+          })
+        }
+
+        // --- Check Faculty Conflict ---
+        if (faculty && r.faculty && faculty.toString() === r.faculty.toString()) {
+          res.json( {
+            ok: false,
+            conflictWith: dept._id,
+            message: `Faculty conflict with department ${dept._id}. Faculty ${r.faculty.name} is already teaching at ${day} ${time}`
+          })
+        }
+      }
+    }
+  }
+
+  // No conflicts
+  res.json({ ok: true });
+}
+
 // creating this function 
 const publishRoutine = async (req, res) => {
   try {
@@ -373,4 +440,4 @@ const createDepartment = async (req,res) => {
     }
 }
 
-module.exports = {createCourse,createRoom,createDepartmentTimetable,createDepartment,publishRoutine}
+module.exports = {createCourse,createRoom,createDepartmentTimetable,createDepartment,conflict,publishRoutine}

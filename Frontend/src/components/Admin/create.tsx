@@ -5,6 +5,7 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../ui/tabs";
 import axiosClient from "../../lib/axiosClient";
+// import { useNavigate } from "react-router";
 
 // Types for safety
 type Slot = { subject: string; faculty: string; room: string};
@@ -13,6 +14,8 @@ type Timetable = Record<string, DaySlots>;
 
 
 export default function CreatePage() {
+
+  // const navigate = useNavigate();
   // ---------------- ROOM ----------------
   const [roomData, setRoomData] = useState({ name: "", type: "", capacity: "", building: "" });
 
@@ -162,7 +165,7 @@ export default function CreatePage() {
 
   const handleSubmit = async (
     e: React.FormEvent,
-    formType: "room" | "department" | "course" | "timetable"
+    formType: "room" | "department" | "course"
   ) => {
     e.preventDefault();
     setLoading(true);
@@ -385,6 +388,13 @@ export default function CreatePage() {
           disabled={!selectedDept || loadingTimetable}
         >
           {loadingTimetable ? "Loading..." : "Fetch Timetable"}
+        </Button>
+
+        <Button className="ml-3"
+          onClick={() =>window.open(`/edit/${selectedDept}`, "_blank")}
+          disabled={!timetable || loadingTimetable ||!selectedDept}
+        >
+          {loadingTimetable ? "Loading..." : "Edit Timetable"}
         </Button>
 
         {/* Timetable Display */}

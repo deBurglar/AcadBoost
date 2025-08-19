@@ -16,6 +16,7 @@ import Analyse from './components/Admin/anaysis';
 import Attendance from './components/FacultyPage/attendance';
 import FacultyLayout from "./components/FacultyPage/FacultyLayout"
 import Courses from './components/FacultyPage/courses';
+import EditTimeTable from './components/Admin/edittimetable';
 function App() {
 
 const { isAuthenticated, user } = useSelector(
@@ -55,13 +56,20 @@ const { isAuthenticated, user } = useSelector(
 
         {/* Admin page */}
         {isAuthenticated && user?.role === 'admin' ? (
+          <>
       <Route path="/admin" element={<Layout/>}>
         <Route index element={<Admin />} />
         <Route path="create" element={<Create />} />
+        
         <Route path="analysis" element={<Analyse />} />
       </Route>
+      <Route path="/edit/:deptId" element={<EditTimeTable />} />
+      </>
+      
     ) : (
       <Route path="/admin/*" element={<Navigate to="/" />} />
+      
+      
     )}
 
   
