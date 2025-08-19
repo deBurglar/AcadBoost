@@ -17,6 +17,7 @@ import Attendance from './components/FacultyPage/attendance';
 import FacultyLayout from "./components/FacultyPage/FacultyLayout"
 import Courses from './components/FacultyPage/courses';
 import EditTimeTable from './components/Admin/edittimetable';
+import TakeAttendance from './components/FacultyPage/takeattendance';
 function App() {
 
 const { isAuthenticated, user } = useSelector(
@@ -45,11 +46,14 @@ const { isAuthenticated, user } = useSelector(
 
         {/* Faculty page */}
         {isAuthenticated && user?.role === 'faculty' ? (
+          <>
       <Route path="/faculty" element={<FacultyLayout/>}>
         <Route index element={<Faculty />} />
         <Route path="attendance" element={<Attendance />} />
         <Route path="attendance/courses" element={<Courses />} />
       </Route>
+      <Route path="attendance/take/:courseId" element={<TakeAttendance />} />
+      </>
     ) : (
       <Route path="/faculty/*" element={<Navigate to="/" />} />
     )}
