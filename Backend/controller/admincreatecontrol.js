@@ -284,50 +284,59 @@ function flattenTimetable(timetableObj) {
   }
   return routine;
 }
-async function conflict(req,res) {
-  const {deptId} = req.params
+async function conflict(req, res) {
+  try {
+    const { deptId } = req.params;
+    const newRoutine = flattenTimetable(req.body);
 
-  const newRoutine = flattenTimetable(req.body)
-  // Fetch all other departments' routines (with faculty + room populated)
-  const otherDepts = await Department.find({ _id: { $ne: deptId } })
-    .populate("routine.faculty", "name")
-    .populate("routine.room", "name")
-    .lean();
+    const deptIdObj = new mongoose.Types.ObjectId(deptId);
 
-  for (const entry of newRoutine) {
-    const { day, time, faculty, room } = entry;
+    const otherDepts = await Department.find({ _id: { $ne: deptIdObj } })
+      .populate("routine.faculty", "name")
+      .populate("routine.room", "name")
+      .lean();
 
-    for (const dept of otherDepts) {
-      const deptRoutine = dept.routine || [];
-      for (const r of deptRoutine) {
-        if (r.day !== day) continue;
-        const times = (r.time || "").split(",").map(t => t.trim());
+    for (const entry of newRoutine) {
+      const { day, time, faculty, room } = entry;
 
-        if (!times.includes(time)) continue;
+      for (const dept of otherDepts) {
+        const deptRoutine = dept.routine || [];
+        for (const r of deptRoutine) {
+          if (r.day !== day) continue;
 
-        // --- Check Room Conflict ---
-        if (room && r.room && room.toString() === r.room.toString()) {
-          res.json ({
-            ok: false,
-            conflictWith: dept._id,
-            message: `Room conflict with department ${dept._id} in room ${r.room.name} at ${day} ${time}`
-          })
-        }
+          const times = Array.isArray(r.time)
+            ? r.time.map(t => t.trim())
+            : (r.time || "").split(",").map(t => t.trim());
 
-        // --- Check Faculty Conflict ---
-        if (faculty && r.faculty && faculty.toString() === r.faculty.toString()) {
-          res.json( {
-            ok: false,
-            conflictWith: dept._id,
-            message: `Faculty conflict with department ${dept._id}. Faculty ${r.faculty.name} is already teaching at ${day} ${time}`
-          })
+          if (!times.includes(time)) continue;
+
+          // --- Check Room Conflict ---
+          if (room && r.room && room === r.room.name) {
+            return res.json({
+              ok: false,
+              conflictWith: dept._id,
+              message: `Room conflict with department ${dept._id} in room ${r.room.name} at ${day} ${time}`
+            });
+          }
+
+          // --- Check Faculty Conflict ---
+          if (faculty && r.faculty && faculty === r.faculty.name) {
+            return res.json({
+              ok: false,
+              conflictWith: dept._id,
+              message: `Faculty conflict with department ${dept._id}. Faculty ${r.faculty.name} is already teaching at ${day} ${time}`
+            });
+          }
         }
       }
     }
-  }
 
-  // No conflicts
-  res.json({ ok: true });
+    // No conflicts
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
 }
 
 // creating this function 

@@ -97,6 +97,8 @@ const checkconflict = async () => {
   try {
     const payload = formatForBackend(timetable);
     const res = await axiosClient.post(`/admin/conflict/${deptId}`, payload);
+    console.log(res)
+    console.log(payload)
 
     if (res.data.ok) {
       alert("✅ No conflicts! Timetable is valid.");
