@@ -14,7 +14,7 @@ interface Student {
   name: string;
   emailId: string;
   studentProfile: StudentProfile;
-  present?: boolean; // ✅ local field for attendance
+  present?: boolean; 
 }
 
 interface CourseResponse {
@@ -27,7 +27,7 @@ export default function AttendancePage() {
   const [students, setStudents] = useState<Student[]>([]);
   const [courseName, setCourseName] = useState<string>("");
 
-  // ✅ Fetch students for this course
+  //  Fetch students for this course
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -43,14 +43,14 @@ export default function AttendancePage() {
     fetchData();
   }, [courseId]);
 
-  // ✅ Toggle present/absent
+  //  Toggle present/absent
   const toggleAttendance = (idx: number) => {
     setStudents((prev) =>
       prev.map((s, i) => (i === idx ? { ...s, present: !s.present } : s))
     );
   };
 
-  // ✅ Submit attendance
+  //  Submit attendance
   const handleSubmit = async () => {
     try {
       const presentStudents = students

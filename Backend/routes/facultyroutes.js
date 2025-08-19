@@ -1,10 +1,13 @@
 const express = require('express')
 const authmidware = require('../middleware/authmidware')
-const { getFacultyScheduleGrouped, studentinmycourse, takeAttendance, getMyCourses, getFacultyLastAttendance } = require('../controller/facultycontroller')
+const { getFacultyScheduleGrouped, studentinmycourse, takeAttendance, getMyCourses, getFacultyLastAttendance, startAttendance } = require('../controller/facultycontroller')
 const facultyRouter = express.Router()
 
 // get student by course
 facultyRouter.get('/studentinmycourse/:courseId',authmidware,studentinmycourse)
+
+// generate qr for the attendance 
+facultyRouter.post('/startattendance',authmidware,startAttendance)
 // do attendance
 facultyRouter.post('/takeattendance',authmidware,takeAttendance)
 // faculty schedule

@@ -3,6 +3,8 @@ const Department = require("../models/department");
 const Attendance = require("../models/attendance");
 const User = require("../models/user")
 const Course = require("../models/courses");
+const redisClient = require("../database/redis")
+const crypto = require('node:crypto')
 //------------- core objectives------------------
 
 //  see his own schedules
@@ -317,6 +319,47 @@ async function getFacultyLastAttendance(req, res) {
 }
 
 
+// generate qr for the attendance
+const startAttendance = async (req, res) => {
+  try {
+    const facultyId = req.result._id; // from auth middleware
+    const { courseId } = req.body;
+
+    //  Verify faculty teaches this course
+    const course = await Course.findOne({ _id: courseId, faculty: facultyId });
+    if (!course) {
+      return res.status(403).json({ error: "You are not assigned to this course" });
+    }
+
+    //  Generate short-lived session token
+    const sessionToken = crypto.randomBytes(8).toString("hex"); // 16 chars
+
+    //  Store in Redis with TTL (e.g. 3 min)
+    await redisClient.setEx(
+      `attendance:${courseId}:${sessionToken}`,
+      180, // seconds
+      "active"
+    );
+
+    // QR payload (students will scan this)
+    const qrPayload = {
+      courseId,
+      sessionToken,
+    };
+
+    res.json({
+      message: "QR session started",
+      qrPayload, // frontend will convert this JSON to QR
+      expiresIn: 180,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+
+
 
 // take attendance
 
@@ -394,5 +437,5 @@ const getMyCourses = async (req, res) => {
 
 module.exports = {getFacultyScheduleGrouped,getFacultyDailyAttendance,getFacultyAttendanceReport,
     studentinmycourse,takeAttendance,getMyCourses,
-    getFacultyLastAttendance
+    getFacultyLastAttendance,startAttendance
 }

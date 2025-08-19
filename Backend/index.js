@@ -8,6 +8,7 @@ const main = require("./database/maindb")
 const redisClient = require("./database/redis")
 const adminRouter = require('./routes/adminRoutes');
 const facultyRouter = require('./routes/facultyroutes');
+const { studentRouter } = require('./routes/studentRoutes');
 
 
 app.use(cors({
@@ -21,6 +22,7 @@ app.use(cookieParser());
 app.use("/auth",authRouter);
 app.use('/admin',adminRouter)
 app.use('/faculty',facultyRouter)
+app.use('/student',studentRouter)
 
 const InitializeConnection = async()=>{
     try {
