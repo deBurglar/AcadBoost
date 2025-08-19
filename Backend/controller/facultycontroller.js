@@ -6,83 +6,96 @@ const Course = require("../models/courses");
 //------------- core objectives------------------
 
 //  see his own schedules
-async function getFacultyScheduleGrouped(req,res) {
-    try {
-        const facultyId = req.result._id
-        // Find all departments with populated routine
-        const departments = await Department.find({
-            "routine.course": { $exists: true }
-        })
-        .populate({
-            path: "routine.course",
-            model: "course",
-            match: { faculty: facultyId }, // only match courses of this faculty
-            populate: {
-                path: "faculty",
-                select: "name email"
-            }
-        })
-        .populate({
-            path: "routine.room",
-            model: "room",
-            select: "name type"
-        })
-        .lean();
+async function getFacultyScheduleGrouped(req, res) {
+  try {
+    const facultyId = req.result._id;
 
-        // Grouped schedule by day
-        const scheduleByDay = {
-            Monday: [],
-            Tuesday: [],
-            Wednesday: [],
-            Thursday: [],
-            Friday: []
-        };
+    // Find all departments with populated routine
+    const departments = await Department.find({
+      "routine.course": { $exists: true }
+    })
+      .populate({
+        path: "routine.course",
+        model: "course",
+        match: { faculty: facultyId }, // only match this faculty's courses
+        select: "_id name subjectcode year department faculty", // ✅ include _id + dept
+        populate: [
+          {
+            path: "faculty",
+            select: "name email"
+          },
+          {
+            path: "department",
+            select: "_id name code"
+          }
+        ]
+      })
+      .populate({
+        path: "routine.room",
+        model: "room",
+        select: "name type"
+      })
+      .lean();
 
-        // Fill schedule
-        departments.forEach(dept => {
-            dept.routine.forEach(entry => {
-                if (entry.course && entry.course.faculty) {
-                    const classInfo = {
-                        department: dept.name,
-                        year: dept.year,
-                        course: entry.course.subjectcode || entry.course.name,
-                        room: entry.room?.name,
-                        roomType: entry.room?.type,
-                        time: entry.time
-                    };
+    // Grouped schedule by day
+    const scheduleByDay = {
+      Monday: [],
+      Tuesday: [],
+      Wednesday: [],
+      Thursday: [],
+      Friday: []
+    };
 
-                    // Map short day to full name
-                    const dayMap = {
-                        Mon: "Monday",
-                        Tue: "Tuesday",
-                        Wed: "Wednesday",
-                        Thu: "Thursday",
-                        Fri: "Friday"
-                    };
+    // Fill schedule
+    departments.forEach((dept) => {
+      dept.routine.forEach((entry) => {
+        if (entry.course && entry.course._id) {
+          const classInfo = {
+            department: entry.course.department?.name || dept.name,
+            departmentId: entry.course.department?._id || dept._id, // ✅ added
+            year: entry.course.year || dept.year,
+            course: entry.course.subjectcode || entry.course.name,
+            courseName: entry.course.name,
+            courseId: entry.course._id, // ✅ added
+            room: entry.room?.name,
+            roomType: entry.room?.type,
+            time: entry.time
+          };
 
-                    const dayName = dayMap[entry.day] || entry.day;
-                    if (!scheduleByDay[dayName]) {
-                        scheduleByDay[dayName] = [];
-                    }
-                    scheduleByDay[dayName].push(classInfo);
-                }
-            });
-        });
+          // Map short day to full name
+          const dayMap = {
+            Mon: "Monday",
+            Tue: "Tuesday",
+            Wed: "Wednesday",
+            Thu: "Thursday",
+            Fri: "Friday"
+          };
 
-        // Object.keys(scheduleByDay).forEach(day => {
-        //     scheduleByDay[day].sort((a, b) => {
-        //         const [aHour, aMin] = a.time.split(":").map(Number);
-        //         const [bHour, bMin] = b.time.split(":").map(Number);
-        //         return aHour - bHour || aMin - bMin;
-        //     });
-        // });
+          const dayName = dayMap[entry.day] || entry.day;
+          if (!scheduleByDay[dayName]) {
+            scheduleByDay[dayName] = [];
+          }
+          scheduleByDay[dayName].push(classInfo);
+        }
+      });
+    });
 
-        res.send(scheduleByDay);
-    } catch (err) {
-        console.error(err);
-        throw new Error("Error fetching faculty schedule");
-    }
+    // Optional: sort by time within each day
+    Object.keys(scheduleByDay).forEach((day) => {
+      scheduleByDay[day].sort((a, b) => {
+        const [aHour, aMin] = a.time.split(":").map(Number);
+        const [bHour, bMin] = b.time.split(":").map(Number);
+        return aHour - bHour || aMin - bMin;
+      });
+    });
+
+    res.send(scheduleByDay);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error fetching faculty schedule" });
+  }
 }
+
 
 // see his class attendance strength
 async function getFacultyDailyAttendance(req,res) {

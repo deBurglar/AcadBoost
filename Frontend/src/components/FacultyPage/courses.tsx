@@ -32,7 +32,6 @@ export default function Courses() {
         const { data: courseData } = await axiosClient.get("/faculty/mycourses");
         setCourses(courseData.courses || []);
 
-        // Fetch attendance (change endpoint if needed)
         const { data: attendanceData } = await axiosClient.get("/faculty/last_attendance_report");
         setAttendance(attendanceData || []);
       } catch (err) {

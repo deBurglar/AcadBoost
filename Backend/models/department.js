@@ -15,7 +15,7 @@ const departmentSchema = Schema({
     routine:[ 
     {
         course:{
-            type: String,
+            type: Schema.Types.ObjectId,
             ref: 'course',
             default:null
         },
