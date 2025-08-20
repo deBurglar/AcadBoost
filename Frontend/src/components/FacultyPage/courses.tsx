@@ -48,10 +48,25 @@ export default function Courses() {
   const labs = courses.filter((c) => c.isLab);
 
    
-
+//edited code 
   if (loading) {
-    return <p className="p-6 text-gray-500">Loading courses...</p>;
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-r from-indigo-300 via-purple-200 to-pink-300">
+        <div className="relative">
+          <div className="w-16 h-16 border-8 border-t-8 border-gray-100 rounded-full animate-spin border-t-indigo-600"></div>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="text-lg font-bold text-indigo-700 animate-pulse">📚</span>
+          </div>
+        </div>
+        <p className="mt-6 text-xl font-semibold text-indigo-800 animate-bounce">
+          Loading Courses...
+        </p>
+        <p className="mt-2 text-sm text-gray-700">Hang tight! Your data is on the way ✨</p>
+      </div>
+    );
   }
+
+
 
   return (
   <div className="p-6">
