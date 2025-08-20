@@ -7,7 +7,6 @@ import type { RootState, AppDispatch } from "../store/store";
 import { checkAuth } from "./authSlice";
 
 import AcademicManagementSystem from './pages/Home'
-import Student from './pages/Student'
 import Faculty from './pages/Faculty'
 import Admin from './pages/Admin'
 import Layout from './components/Admin/Layout';
@@ -19,6 +18,7 @@ import Courses from './components/FacultyPage/courses';
 import EditTimeTable from './components/Admin/edittimetable';
 import TakeAttendance from './components/FacultyPage/takeattendance';
 import StudentLayout from './components/StudentPage/StudentLayout';
+import StudentRoutine from './pages/Student';
 function App() {
 
 const { isAuthenticated, user } = useSelector(
@@ -46,7 +46,7 @@ const { isAuthenticated, user } = useSelector(
         {isAuthenticated && user?.role === 'student' ? (
           <>
       <Route path="/student" element={<StudentLayout/>}>
-        <Route index element={<Student />} />
+        <Route index element={<StudentRoutine />} />
         <Route path="attendance" element={<Attendance />} />
         <Route path="attendance/courses" element={<Courses />} />
       </Route>
