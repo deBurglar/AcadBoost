@@ -32,7 +32,7 @@ function mergeSlots(slots: any[]) {
   }
   merged.push(current)
 
-  // ✅ Normalize lectures to 1hr
+  //  Normalize lectures to 1hr
   return merged.map((slot) => {
     const startHour = Number(slot.startTime.split(":")[0])
     const endHour = Number(slot.endTime.split(":")[0])
@@ -45,7 +45,7 @@ function mergeSlots(slots: any[]) {
   })
 }
 
-// ✅ Check if current time and day lies in slot
+//  Check if current time and day lies in slot
 // function isCurrentTimeInSlot(slot: any, slotDay: string) {
 //   const now = new Date()
 
@@ -53,7 +53,7 @@ function mergeSlots(slots: any[]) {
 //   const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
 //   const today = days[now.getDay()]
 
-//   if (today !== slotDay) return false // 🚫 Not today
+//   if (today !== slotDay) return false //  Not today
 
 //   const hour = now.getHours()
 //   const startHour = Number(slot.startTime.split(":")[0])

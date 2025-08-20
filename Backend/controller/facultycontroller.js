@@ -365,20 +365,20 @@ const startAttendance = async (req, res) => {
 
 const takeAttendance = async (req, res) => {
   try {
-    const facultyId = req.result._id; // from auth middleware
+    const facultyId = req.result._id;
     const { courseId, presentStudents } = req.body; 
     // presentStudents = [ObjectId, ObjectId, ...]
 
-    // ✅ Verify faculty teaches this course
+    //  Verify faculty teaches this course
     const course = await Course.findOne({ _id: courseId, faculty: facultyId });
     if (!course) {
       return res.status(403).json({ error: "You are not assigned to this course" });
     }
 
-    // ✅ Remove duplicates
+    //  Remove duplicates
     const uniquePresent = [...new Set(presentStudents)];
 
-    // ✅ Insert attendance for each student
+    //  Insert attendance for each student
     const attendanceDocs = uniquePresent.map(studentId => ({
       student: studentId,
       course: courseId
