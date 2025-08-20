@@ -59,10 +59,10 @@ export default function AttendancePage() {
       const presentStudents = students
         .filter((s) => s.present)
         .map((s) => s._id);
-
       await axiosClient.post("/faculty/takeattendance", {
         courseId,
         presentStudents,
+        sessionKey: "manual-" + Date.now(),
       });
 
       alert("Manual attendance submitted ✅");

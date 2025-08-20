@@ -273,7 +273,7 @@ async function getFacultyLastAttendance(req, res) {
     for (const course of courses) {
       // 2) Find the latest attendance record for this course
       const lastRecord = await Attendance.findOne({ course: course._id })
-        .sort({ createdAt: -1 }); // newest first
+        .sort({ timestamp: -1 }); // use timestamp instead of createdAt
 
       let lastAttendance = null;
 
@@ -281,31 +281,41 @@ async function getFacultyLastAttendance(req, res) {
         // Count how many students were present in that session
         const presentCount = await Attendance.countDocuments({
           course: course._id,
-          createdAt: lastRecord.createdAt
+          sessionKey: lastRecord.sessionKey   // identify session by sessionKey
         });
 
         lastAttendance = {
-          date: lastRecord.createdAt,
+          date: lastRecord.timestamp, // use your timestamp field
           presentCount
         };
       }
 
-      // 3) Count total students in the department of this course
+      // 3) Count total students in the department(s) of this course
       let totalStudents = 0;
+      let departmentName = "";
 
       if (course.department && course.department.length > 0) {
-        // Sum students from all departments
-        for (const dept of course.department) {
-          totalStudents += await User.countDocuments({
+        if (Array.isArray(course.department)) {
+          departmentName = course.department.map(d => d.name).join(", ");
+          for (const dept of course.department) {
+            totalStudents += await User.countDocuments({
+              role: "student",
+              "studentProfile.department": dept._id
+            });
+          }
+        } else {
+          departmentName = course.department.name;
+          totalStudents = await User.countDocuments({
             role: "student",
-            "studentProfile.department": dept._id
+            "studentProfile.department": course.department._id
           });
         }
       }
+
       result.push({
         courseId: course._id,
         courseName: course.name,
-        departmentName: course.department.name,
+        departmentName,
         totalStudents,
         lastAttendance
       });
