@@ -53,7 +53,7 @@ const { isAuthenticated, user } = useSelector(
       <Route path="attendance/take/:courseId" element={<TakeAttendance />} />
       </>
     ) : (
-      <Route path="/faculty/*" element={<Navigate to="/" />} />
+      <Route path="/student/*" element={<Navigate to="/" />} />
     )}
 
         {/* Faculty page */}
