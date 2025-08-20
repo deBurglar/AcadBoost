@@ -322,38 +322,24 @@ async function getFacultyLastAttendance(req, res) {
 // generate qr for the attendance
 const startAttendance = async (req, res) => {
   try {
-    const facultyId = req.result._id; // from auth middleware
+    const facultyId = req.result._id;
     const { courseId } = req.body;
 
-    //  Verify faculty teaches this course
+    // verify faculty teaches this course
     const course = await Course.findOne({ _id: courseId, faculty: facultyId });
     if (!course) {
       return res.status(403).json({ error: "You are not assigned to this course" });
     }
 
-    //  Generate short-lived session token
-    const sessionToken = crypto.randomBytes(8).toString("hex"); // 16 chars
-
-    //  Store in Redis with TTL (e.g. 3 min)
-    await redisClient.setEx(
-      `attendance:${courseId}:${sessionToken}`,
-      180, // seconds
-      "active"
-    );
-
-    // QR payload (students will scan this)
-    const qrPayload = {
-      courseId,
-      sessionToken,
-    };
+    // generate secure session key (32 hex chars)
+    const sessionKey = crypto.randomBytes(16).toString("hex");
 
     res.json({
-      message: "QR session started",
-      qrPayload, // frontend will convert this JSON to QR
-      expiresIn: 180,
+      courseId,
+      sessionKey,
+      expiresIn: 20, // frontend refreshes QR every 20s
     });
   } catch (err) {
-    console.error(err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -366,29 +352,27 @@ const startAttendance = async (req, res) => {
 const takeAttendance = async (req, res) => {
   try {
     const facultyId = req.result._id;
-    const { courseId, presentStudents } = req.body; 
-    // presentStudents = [ObjectId, ObjectId, ...]
+    const { courseId, presentStudents, sessionKey } = req.body;
 
-    //  Verify faculty teaches this course
+    // verify faculty teaches this course
     const course = await Course.findOne({ _id: courseId, faculty: facultyId });
     if (!course) {
       return res.status(403).json({ error: "You are not assigned to this course" });
     }
 
-    //  Remove duplicates
+    // remove duplicates
     const uniquePresent = [...new Set(presentStudents)];
 
-    //  Insert attendance for each student
-    const attendanceDocs = uniquePresent.map(studentId => ({
+    const attendanceDocs = uniquePresent.map((studentId) => ({
       student: studentId,
-      course: courseId
+      course: courseId,
+      sessionKey,
     }));
 
-    await Attendance.insertMany(attendanceDocs);
+    await Attendance.insertMany(attendanceDocs, { ordered: false });
 
-    res.json({ message: "Attendance marked successfully", count: attendanceDocs.length });
+    res.json({ message: "Manual attendance marked ✅", count: attendanceDocs.length });
   } catch (err) {
-    console.error(err);
     res.status(500).json({ error: err.message });
   }
 };

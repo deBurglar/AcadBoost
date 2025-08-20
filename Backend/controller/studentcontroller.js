@@ -1,7 +1,8 @@
 
 
-
 // ---------------core objectives--------------
+
+const Attendance = require("../models/attendance");
 
 // see his routine
 
@@ -9,29 +10,29 @@
 
 
 // mark attendance 
-const markattendancebyQR =  async (req, res) => {
+const markattendancebyQR = async (req, res) => {
   try {
-    const studentId = req.user._id;
-    const { courseId, sessionToken } = req.body;
+    const studentId = req.result._id; // from auth middleware
+    const { courseId, sessionKey } = req.body;
 
-    // Check session token validity (stored in Redis/DB when faculty generated QR)
-    const isValid = await redisClient.get(`attendance:${courseId}:${sessionToken}`);
-    if (!isValid) {
-      return res.status(400).json({ error: "Invalid or expired QR" });
+    // check duplicate entry
+    const existing = await Attendance.findOne({ student: studentId, course: courseId, sessionKey });
+    if (existing) {
+      return res.status(400).json({ error: "Attendance already marked" });
     }
 
-    // Save attendance
-    await Attendance.create({
+    const attendance = new Attendance({
       student: studentId,
       course: courseId,
+      sessionKey,
     });
 
-    res.json({ message: "Attendance marked successfully ✅" });
+    await attendance.save();
+
+    res.json({ message: "Attendance marked via QR ✅" });
   } catch (err) {
-    console.error(err);
     res.status(500).json({ error: err.message });
   }
-}
-
+};
 module.exports={markattendancebyQR}
 
