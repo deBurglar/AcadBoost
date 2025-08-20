@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axiosClient from "../lib/axiosClient";
+import { Scanner } from "@yudiel/react-qr-scanner"; 
+
 // ==== Types ====
 interface Course {
   _id: string;
@@ -44,10 +46,13 @@ const StudentRoutine: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Scanner state
+  const [scanning, setScanning] = useState(false);
+
   useEffect(() => {
     const fetchRoutine = async () => {
       try {
-        const {data} = await axiosClient.get("/student/routine");
+        const { data } = await axiosClient.get("/student/routine");
         setRoutineData(data);
       } catch (err) {
         setError((err as Error).message);
@@ -58,6 +63,21 @@ const StudentRoutine: React.FC = () => {
 
     fetchRoutine();
   }, []);
+
+  // Handle QR Scan result
+  const handleScan = async (result: string) => {
+    if (!result) return;
+
+    setScanning(false);
+
+    try {
+      await axiosClient.post("/attendance/mark", { qrData: result });
+      alert("✅ Attendance marked successfully!");
+    } catch (err) {
+      console.error(err);
+      alert("❌ Failed to mark attendance");
+    }
+  };
 
   if (loading) return <p className="p-4">Loading routine...</p>;
   if (error) return <p className="p-4 text-red-600">Error: {error}</p>;
@@ -72,12 +92,13 @@ const StudentRoutine: React.FC = () => {
     },
     {} as Record<string, RoutineEntry[]>
   );
+
   const timeToMinutes = (time: string): number => {
-  const [hourStr, minuteStr] = time.split(":");
-  const hour = parseInt(hourStr, 10);
-  const minute = parseInt(minuteStr, 10);
-  return hour * 60 + minute;
-};
+    const [hourStr, minuteStr] = time.split(":");
+    const hour = parseInt(hourStr, 10);
+    const minute = parseInt(minuteStr, 10);
+    return hour * 60 + minute;
+  };
 
   // Sort each day's routine by time
   Object.keys(groupedByDay).forEach((day) => {
@@ -93,6 +114,42 @@ const StudentRoutine: React.FC = () => {
       <p className="text-gray-600 mb-6">
         Department: {routineData.department} | Year: {routineData.year}
       </p>
+
+      {/* Scanner Button */}
+      <div className="mb-6">
+        <button
+          onClick={() => setScanning(true)}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700"
+        >
+          📷 Scan for Attendance
+        </button>
+      </div>
+
+      {/* QR Scanner Popup */}
+      {scanning && (
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+          <div className="bg-white p-4 rounded-xl shadow-lg">
+            <h3 className="text-lg font-semibold mb-2">Scan QR Code</h3>
+
+            <Scanner
+              onScan={(results) => {
+                if (results && results.length > 0) {
+                  handleScan(results[0].rawValue); // ✅ rawValue contains QR text
+                }
+              }}
+              onError={(error) => console.error(error)}
+              styles={{ container: { width: "300px" } }}
+            />
+
+            <button
+              onClick={() => setScanning(false)}
+              className="mt-4 px-3 py-1 bg-red-500 text-white rounded-lg"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Routine Day-wise */}
       <div className="grid md:grid-cols-2 gap-6">
