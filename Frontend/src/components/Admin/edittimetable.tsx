@@ -110,7 +110,26 @@ const checkconflict = async () => {
     alert("⚠️ Error checking conflicts. Please try again.");
   }
 };
-  if (loading) return <p className="p-6">Loading timetable...</p>;
+
+//edited code
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-purple-200 via-pink-200 to-yellow-200">
+        <div className="relative">
+          <div className="w-20 h-20 border-8 border-t-8 border-gray-200 rounded-full animate-spin border-t-purple-500"></div>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="text-xl font-extrabold text-purple-700 animate-pulse">⏳</span>
+          </div>
+        </div>
+        <p className="mt-6 text-2xl font-bold text-purple-700 animate-bounce">
+          Loading Timetable...
+        </p>
+        <p className="mt-2 text-sm text-gray-600">Please wait while we fetch your data 🚀</p>
+      </div>
+    );
+  }
+
+
 
   return (
     <div className="p-6">
