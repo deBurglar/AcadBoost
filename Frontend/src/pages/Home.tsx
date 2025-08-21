@@ -295,7 +295,7 @@ export default function AcademicManagementSystem() {
             <Button
               size="lg"
               variant="outline"
-              className="border-white text-white hover:bg-white hover:text-blue-600 text-lg px-8 py-3 rounded-xl shadow-lg"
+              className="border-white text-blue-600 hover:bg-white hover:text-blue-600 text-lg px-8 py-3 rounded-xl shadow-lg"
               onClick={() => setTimetableModalOpen(true)}
             >
               Schedule Demo
