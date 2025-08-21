@@ -360,8 +360,245 @@ const getStudentCountPerYearPerDepartment = async (req, res) => {
 };
 
 
+// Attendance per dept
+const getAttendanceGroupedByDepartment = async (req, res) => {
+  try {
+    const result = await Attendance.aggregate([
+      // Join with student (User)
+      {
+        $lookup: {
+          from: "users",
+          localField: "student",
+          foreignField: "_id",
+          as: "studentInfo",
+        },
+      },
+      { $unwind: "$studentInfo" },
+
+      // Join with course
+      {
+        $lookup: {
+          from: "courses",
+          localField: "course",
+          foreignField: "_id",
+          as: "courseInfo",
+        },
+      },
+      { $unwind: "$courseInfo" },
+
+      // Join with department (from student's profile)
+      {
+        $lookup: {
+          from: "departments",
+          localField: "studentInfo.studentProfile.department",
+          foreignField: "_id",
+          as: "departmentInfo",
+        },
+      },
+      { $unwind: "$departmentInfo" },
+
+      // Group by student + course → attendance count
+      {
+        $group: {
+          _id: {
+            departmentId: "$departmentInfo._id",
+            departmentName: "$departmentInfo.name",
+            departmentYear: "$departmentInfo.year",
+            studentId: "$studentInfo._id",
+            studentName: "$studentInfo.name",
+            courseId: "$courseInfo._id",
+            courseName: "$courseInfo.name",
+          },
+          attendedSessions: { $sum: 1 },
+        },
+      },
+
+      // Lookup total sessions held for that course
+      {
+        $lookup: {
+          from: "attendances",
+          let: { courseId: "$_id.courseId" },
+          pipeline: [
+            { $match: { $expr: { $eq: ["$course", "$$courseId"] } } },
+            { $group: { _id: "$sessionKey" } }, // unique sessions
+            { $count: "totalSessions" },
+          ],
+          as: "courseSessions",
+        },
+      },
+      {
+        $addFields: {
+          totalSessions: {
+            $ifNull: [{ $arrayElemAt: ["$courseSessions.totalSessions", 0] }, 0],
+          },
+        },
+      },
+
+      // Calculate %
+      {
+        $addFields: {
+          attendancePercentage: {
+            $cond: [
+              { $eq: ["$totalSessions", 0] },
+              0,
+              {
+                $round: [
+                  {
+                    $multiply: [
+                      { $divide: ["$attendedSessions", "$totalSessions"] },
+                      100,
+                    ],
+                  },
+                  2,
+                ],
+              },
+            ],
+          },
+        },
+      },
+
+      // Group courses under each student
+      {
+        $group: {
+          _id: {
+            departmentId: "$_id.departmentId",
+            departmentName: "$_id.departmentName",
+            departmentYear: "$_id.departmentYear",
+            studentId: "$_id.studentId",
+            studentName: "$_id.studentName",
+          },
+          courses: {
+            $push: {
+              courseId: "$_id.courseId",
+              courseName: "$_id.courseName",
+              attendedSessions: "$attendedSessions",
+              totalSessions: "$totalSessions",
+              attendancePercentage: "$attendancePercentage",
+            },
+          },
+        },
+      },
+
+      // Group students under department
+      {
+        $group: {
+          _id: {
+            departmentId: "$_id.departmentId",
+            departmentName: "$_id.departmentName",
+            departmentYear: "$_id.departmentYear",
+          },
+          students: {
+            $push: {
+              studentId: "$_id.studentId",
+              studentName: "$_id.studentName",
+              courses: "$courses",
+            },
+          },
+        },
+      },
+
+      { $sort: { "_id.departmentName": 1, "students.studentName": 1 } },
+    ]);
+
+    const formatted = result.map((dept) => ({
+      departmentId: dept._id.departmentId,
+      departmentName: dept._id.departmentName,
+      departmentYear: dept._id.departmentYear,
+      students: dept.students,
+    }));
+
+    return res.status(200).json(formatted);
+  } catch (error) {
+    console.error("Error fetching attendance:", error);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+// controllers/attendanceStats.controller.ts
+
+const getCourseAttendanceStatsByDepartment = async (req, res) => {
+  try {
+    const stats = await Attendance.aggregate([
+      {
+        $lookup: {
+          from: "courses",
+          localField: "course",
+          foreignField: "_id",
+          as: "course",
+        },
+      },
+      { $unwind: "$course" },
+      {
+        $lookup: {
+          from: "departments",
+          localField: "course.department",
+          foreignField: "_id",
+          as: "department",
+        },
+      },
+      { $unwind: "$department" },
+      {
+        $group: {
+          _id: {
+            deptId: "$department._id",
+            deptName: "$department.name",
+            deptYear: "$department.year",
+            courseId: "$course._id",
+            courseName: "$course.name",
+          },
+          totalSessions: { $addToSet: "$sessionKey" }, // unique sessions
+          totalAttendance: { $sum: 1 }, // total student attendance records
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          departmentId: "$_id.deptId",
+          departmentName: "$_id.deptName",
+          departmentYear: "$_id.deptYear",
+          courseId: "$_id.courseId",
+          courseName: "$_id.courseName",
+          totalSessions: { $size: "$totalSessions" },
+          totalAttendance: 1,
+        },
+      },
+      {
+        $group: {
+          _id: {
+            departmentId: "$departmentId",
+            departmentName: "$departmentName",
+            departmentYear: "$departmentYear",
+          },
+          courses: {
+            $push: {
+              courseId: "$courseId",
+              courseName: "$courseName",
+              totalSessions: "$totalSessions",
+              totalAttendance: "$totalAttendance",
+            },
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          departmentId: "$_id.departmentId",
+          departmentName: "$_id.departmentName",
+          departmentYear: "$_id.departmentYear",
+          courses: 1,
+        },
+      },
+    ]);
+
+    res.json(stats);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
 
 
 module.exports = { getFacultyAssignmentsbyCourse ,getAssignmentsByFaculty,getAttendanceByDepartment,getFaculties,getDepartments,getDepartmentTimetable,getRooms,
-  getStudentCountByDepartment,getStudentCountPerYear,getStudentCountPerYearPerDepartment
+  getStudentCountByDepartment,getStudentCountPerYear,getStudentCountPerYearPerDepartment,
+  getAttendanceGroupedByDepartment,getCourseAttendanceStatsByDepartment
 };

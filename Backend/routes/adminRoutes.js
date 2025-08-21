@@ -2,7 +2,10 @@ const express = require('express')
 const adminRouter = express.Router()
 const {createCourse, createDepartment, createRoom, createDepartmentTimetable,publishRoutine, conflict} = require('../controller/admincreatecontrol')
 const {getFacultyAssignmentsbyCourse,getAssignmentsByFaculty, getFaculties, getDepartments, getDepartmentTimetable, getRooms, 
-    getStudentCountByDepartment, getStudentCountPerYear, getStudentCountPerYearPerDepartment} = require("../controller/adminanalysiscontrol")
+    getStudentCountByDepartment, getStudentCountPerYear, getStudentCountPerYearPerDepartment,
+    getAttendanceGroupedByDepartment,
+    getCourseAttendanceStatsByDepartment,
+} = require("../controller/adminanalysiscontrol")
 const authmidware = require('../middleware/authmidware')
 
 
@@ -18,12 +21,14 @@ adminRouter.get('/getfaculties',authmidware,getFaculties)
 adminRouter.get('/getrooms',authmidware,getRooms)
 adminRouter.get("/presenttimetable/:deptId",authmidware,getDepartmentTimetable)
 // analusis
+// studentcount v/s dept
 adminRouter.get('/studentcountbydept/:deptId',authmidware,getStudentCountByDepartment)
 adminRouter.get('/studentcountbyyear',authmidware,getStudentCountPerYear)
 adminRouter.get('/studentcountperyearperdept',authmidware,getStudentCountPerYearPerDepartment)
 
-
-
+// year and departmentwise student attendance
+adminRouter.get('/student_attendance_year_dept',authmidware,getAttendanceGroupedByDepartment)
+adminRouter.get('/student_attendance_per_course',authmidware,getCourseAttendanceStatsByDepartment)
 
 adminRouter.post("/course_analyse",authmidware,getFacultyAssignmentsbyCourse)
 adminRouter.post("/faculty_analyse",authmidware,getAssignmentsByFaculty)
