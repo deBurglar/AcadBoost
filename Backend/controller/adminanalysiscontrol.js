@@ -262,6 +262,106 @@ const getAttendanceByDepartment = async (req, res) => {
   }
 };
 
+const getStudentCountByDepartment = async (req, res) => {
+  try {
+    const { deptId } = req.params;
+
+    if (!deptId) {
+      return res.status(400).json({ message: "Department ID is required" });
+    }
+
+    // Get department name
+    const department = await Department.findById(deptId).select("name");
+    if (!department) {
+      return res.status(404).json({ message: "Department not found" });
+    }
+
+    // Count students
+    const totalStudents = await User.countDocuments({
+      role: "student",
+      "studentProfile.department": deptId,
+    });
+
+    return res.status(200).json({
+      department: department.name,
+      totalStudents,
+    });
+  } catch (error) {
+    console.error("Error fetching student count by department:", error);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+// Get number of students per year (across all departments)
+const getStudentCountPerYear = async (req, res) => {
+  try {
+    const result = await User.aggregate([
+      { $match: { role: "student" } },
+      {
+        $group: {
+          _id: "$studentProfile.year",   // group by year
+          totalStudents: { $sum: 1 },
+        },
+      },
+      { $sort: { _id: 1 } }, // sort by year ascending
+    ]);
+
+    // Format result
+    const formatted = result.map((item) => ({
+      year: item._id,
+      totalStudents: item.totalStudents,
+    }));
+
+    return res.status(200).json(formatted);
+  } catch (error) {
+    console.error("Error fetching student count per year:", error);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+const getStudentCountPerYearPerDepartment = async (req, res) => {
+  try {
+    const result = await User.aggregate([
+      { $match: { role: "student" } },
+      {
+        $group: {
+          _id: {
+            department: "$studentProfile.department",
+            year: "$studentProfile.year",
+          },
+          totalStudents: { $sum: 1 },
+        },
+      },
+      {
+        $lookup: {
+          from: "departments",          // collection name in MongoDB
+          localField: "_id.department",
+          foreignField: "_id",
+          as: "departmentInfo",
+        },
+      },
+      { $unwind: "$departmentInfo" },
+      { $sort: { "_id.department": 1, "_id.year": 1 } },
+    ]);
+
+    // Format response
+    const formatted = result.map((item) => ({
+      departmentId: item._id.department,
+      departmentName: item.departmentInfo.name,
+      year: item._id.year,
+      totalStudents: item.totalStudents,
+    }));
+
+    return res.status(200).json(formatted);
+  } catch (error) {
+    console.error("Error fetching students per year per department:", error);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+};
 
 
-module.exports = { getFacultyAssignmentsbyCourse ,getAssignmentsByFaculty,getAttendanceByDepartment,getFaculties,getDepartments,getDepartmentTimetable,getRooms};
+
+
+module.exports = { getFacultyAssignmentsbyCourse ,getAssignmentsByFaculty,getAttendanceByDepartment,getFaculties,getDepartments,getDepartmentTimetable,getRooms,
+  getStudentCountByDepartment,getStudentCountPerYear,getStudentCountPerYearPerDepartment
+};
