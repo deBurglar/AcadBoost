@@ -19,6 +19,9 @@ import EditTimeTable from './components/Admin/edittimetable';
 import TakeAttendance from './components/FacultyPage/takeattendance';
 import StudentLayout from './components/StudentPage/StudentLayout';
 import StudentRoutine from './pages/Student';
+import { addNotification } from "./notificationslice";
+import { registerServiceWorker, subscribeUser } from "./lib/pushManager";
+import axiosClient from './lib/axiosClient';
 function App() {
 
 const { isAuthenticated, user } = useSelector(
@@ -28,6 +31,70 @@ const { isAuthenticated, user } = useSelector(
 
   useEffect(() => {
     dispatch(checkAuth());
+  }, [dispatch]);
+
+ useEffect(() => {
+    let mounted = true;
+
+    async function initPush() {
+      try {
+        if (!("serviceWorker" in navigator)) return;
+
+        // Register SW
+        const reg = await registerServiceWorker();
+        console.log("Service worker registered", reg);
+
+        // Get public VAPID key from backend (matches your notifRouter.get("/publicKey"))
+        const { data } = await axiosClient.get(`/notifications/publicKey`);
+        const publicKey = data?.publicKey;
+        if (!publicKey) {
+          console.warn("No public key returned from backend");
+          return;
+        }
+
+        // If already subscribed, we may get an existing subscription
+        const existing = await reg.pushManager.getSubscription();
+        if (existing) {
+          // Send existing to backend to ensure it's saved
+          await axiosClient.post(`/notifications/subscribe`, existing.toJSON());
+          console.log("Existing subscription sent to backend");
+        } else {
+          // subscribe and send to backend
+          const subscriptionJSON = await subscribeUser(reg, publicKey);
+          await axiosClient.post(`/notifications/subscribe`, subscriptionJSON);
+          console.log("New subscription saved on backend");
+        }
+      } catch (err) {
+        console.error("Push init error:", err);
+      }
+    }
+
+    initPush();
+
+    // Listen for messages forwarded from service worker
+    if ("serviceWorker" in navigator) {
+      const onMessage = (event: MessageEvent) => {
+        if (event?.data?.type === "PUSH_NOTIFICATION") {
+          const payload = event.data.payload;
+          // payload assumed: { title, body, url, ... }
+          const id = Date.now().toString();
+          dispatch(
+            addNotification({
+              id,
+              title: payload.title || "Notification",
+              message: payload.body || payload.message || "",
+              read: false,
+              url: payload.url || "/",
+            })
+          );
+        }
+      };
+      navigator.serviceWorker.addEventListener("message", onMessage);
+      return () => {
+        mounted = false;
+        navigator.serviceWorker.removeEventListener("message", onMessage);
+      };
+    }
   }, [dispatch]);
 
   return (

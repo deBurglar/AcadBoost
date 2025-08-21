@@ -9,7 +9,7 @@ const redisClient = require("./database/redis")
 const adminRouter = require('./routes/adminRoutes');
 const facultyRouter = require('./routes/facultyroutes');
 const { studentRouter } = require('./routes/studentRoutes');
-
+const notifRouter = require("./routes/notificationRoutes");
 
 app.use(cors({
     origin:[
@@ -23,6 +23,7 @@ app.use("/auth",authRouter);
 app.use('/admin',adminRouter)
 app.use('/faculty',facultyRouter)
 app.use('/student',studentRouter)
+app.use("/notifications", notifRouter);
 
 const InitializeConnection = async()=>{
     try {

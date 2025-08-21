@@ -51,7 +51,7 @@ export default function Courses() {
 //edited code 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-r from-indigo-300 via-purple-200 to-pink-300">
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-r from-indigo-300 via-purple-200 to-pink-300 w-[100vw]">
         <div className="relative">
           <div className="w-16 h-16 border-8 border-t-8 border-gray-100 rounded-full animate-spin border-t-indigo-600"></div>
           <div className="absolute inset-0 flex items-center justify-center">
