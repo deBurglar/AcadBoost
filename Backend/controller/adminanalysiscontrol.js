@@ -2,7 +2,7 @@ const Department = require('../models/department');
 const Attendance = require('../models/attendance');
 const User = require('../models/user');
 const Room = require('../models/room');
-
+const Course = require("../models/courses")
 const getDepartments = async (req, res) => {
   try {
     const departments = await Department.find({});
@@ -100,6 +100,31 @@ const getRooms = async (req, res) => {
   }
 };
 
+
+
+// GET all courses of a department
+ const getCoursesByDepartment = async (req, res) => {
+  try {
+    const { departmentId } = req.params; // department id comes from URL
+
+    if (!departmentId) {
+      return res.status(400).json({ success: false, message: "Department ID is required" });
+    }
+
+    const courses = await Course.find({ department: { $in: [departmentId] } })
+      .populate("faculty", "name email") // populate faculty details (optional)
+      .populate("department", "name");   // populate department details (optional)
+
+    return res.status(200).json({
+      success: true,
+      count: courses.length,
+      data: courses
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+};
 
 // Controller to get faculty-course assignments
 const getFacultyAssignmentsbyCourse = async (req, res) => {
@@ -628,5 +653,5 @@ const getCourseAttendanceStatsByDepartment = async (req, res) => {
 
 module.exports = { getFacultyAssignmentsbyCourse ,getAssignmentsByFaculty,getAttendanceByDepartment,getFaculties,getDepartments,getDepartmentTimetable,getRooms,
   getStudentCountByDepartment,getStudentCountPerYear,getStudentCountPerYearPerDepartment,
-  getAttendanceGroupedByDepartment,getCourseAttendanceStatsByDepartment,getStudentCountForAllDepartments
+  getAttendanceGroupedByDepartment,getCourseAttendanceStatsByDepartment,getStudentCountForAllDepartments,getCoursesByDepartment
 };
