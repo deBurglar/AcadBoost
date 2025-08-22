@@ -413,6 +413,41 @@ const studentinmycourse = async (req, res) => {
   }
 };
 
+// student department wise
+const studentsInMyDepartment = async (req, res) => {
+  try {
+    const facultyId = req.result._id;
+    const { deptId, year } = req.params;
+
+    // check if department exists
+    const department = await Department.findById(deptId);
+    if (!department) {
+      return res.status(404).json({ error: "Department not found" });
+    }
+
+    // (optional) you can also check if faculty belongs to this department
+    // const faculty = await User.findOne({ _id: facultyId, role: "faculty", "facultyProfile.department": deptId });
+    // if (!faculty) {
+    //   return res.status(403).json({ error: "You are not part of this department" });
+    // }
+
+    // fetch students from this department & year
+    const students = await User.find({
+      role: "student",
+      "studentProfile.department": deptId,
+      ...(year ? { "studentProfile.year": year } : {}) // filter by year if provided
+    }).select("name emailId studentProfile");
+
+    res.json({
+      department: department.name,
+      year: year || "All Years",
+      students
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 //faculty courses
 const getMyCourses = async (req, res) => {
   try {
@@ -431,5 +466,5 @@ const getMyCourses = async (req, res) => {
 
 module.exports = {getFacultyScheduleGrouped,getFacultyDailyAttendance,getFacultyAttendanceReport,
     studentinmycourse,takeAttendance,getMyCourses,
-    getFacultyLastAttendance,startAttendance
+    getFacultyLastAttendance,startAttendance,studentsInMyDepartment
 }

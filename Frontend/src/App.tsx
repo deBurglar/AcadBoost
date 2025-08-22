@@ -23,6 +23,7 @@ import { addNotification } from "./notificationslice";
 import { registerServiceWorker, subscribeUser } from "./lib/pushManager";
 import axiosClient from './lib/axiosClient';
 import StudentDeptAnalytics from './components/Admin/Analysis/studentvsDept';
+import DepartmentAttendanceDashboard from './components/Admin/Analysis/departmentvsattendance';
 function App() {
 
 const { isAuthenticated, user } = useSelector(
@@ -148,6 +149,7 @@ const { isAuthenticated, user } = useSelector(
         
         <Route path="analysis" element={<Analyse />} />
         <Route path="student-vs-dept" element={<StudentDeptAnalytics />} />
+        <Route path="attendance-vs-dept" element={<DepartmentAttendanceDashboard />} />
       </Route>
       <Route path="/edit/:deptId" element={<EditTimeTable />} />
       </>

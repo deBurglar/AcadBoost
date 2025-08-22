@@ -41,6 +41,7 @@ export default function CreatePage() {
   const [selectedDept, setSelectedDept] = useState("");
   const [timetable, setTimetable] = useState<Timetable | null>(null);
   const [loadingTimetable, setLoadingTimetable] = useState(false);
+  const [selectedYear,setSelectedYear] = useState(3)
 
   // ---------- helpers for time + merging ----------
   const toMinutes = (t: string) => {
@@ -381,6 +382,23 @@ export default function CreatePage() {
             ))}
           </select>
         </div>
+
+
+         {/* <div>
+          <Label>Select Year</Label>
+          <select
+            value={selectedYear}
+            onChange={(e) => setSelectedYear(Number(e.target.value))}
+            className="w-full p-2 border rounded-md"
+          >
+            <option value="">Select Year</option>
+            {[1, 2, 3, 4].map((year) => (
+              <option key={year} value={year}>
+                Year {year}
+              </option>
+            ))}
+          </select>
+        </div> */}
 
         {/* Fetch Button */}
         <Button

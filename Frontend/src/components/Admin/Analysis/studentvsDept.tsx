@@ -12,6 +12,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { Card, CardContent } from "../../ui/card";
+import ExportButtons from "../../exportbtn";
 
 const COLORS = [
   "#4F46E5", // Indigo
@@ -82,6 +83,7 @@ const StudentDeptAnalytics: React.FC = () => {
 
   return (
     <div className="p-8 space-y-8">
+       <ExportButtons/>
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 w-[70vw]">
         <Card className="shadow-lg rounded-2xl w-full">

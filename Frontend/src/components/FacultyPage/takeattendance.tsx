@@ -152,7 +152,7 @@ export default function AttendancePage() {
             onClick={handleSubmit}
             className="mt-6 w-full py-3 rounded-xl font-medium bg-blue-600 text-white"
           >
-            Submit Manual Attendance
+            Submit The Attendance
           </button>
         </div>
 

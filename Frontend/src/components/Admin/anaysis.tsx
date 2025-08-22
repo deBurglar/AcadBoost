@@ -8,9 +8,9 @@ const DashboardCards = () => {
 
   const cards = [
     { title: "Student vs Department", path: "/admin/student-vs-dept", icon: <Users className="w-10 h-10 text-blue-500" /> },
-    { title: "Attendance vs Department", path: "/attendance-vs-dept", icon: <UserCheck className="w-10 h-10 text-green-500" /> },
-    { title: "Course vs Department", path: "/course-vs-dept", icon: <BookOpen className="w-10 h-10 text-purple-500" /> },
-    { title: "Faculty vs Department", path: "/faculty-vs-dept", icon: <BarChart3 className="w-10 h-10 text-pink-500" /> },
+    { title: "Attendance vs Department", path: "/admin/attendance-vs-dept", icon: <UserCheck className="w-10 h-10 text-green-500" /> },
+    { title: "Course vs Department", path: "/admin/course-vs-dept", icon: <BookOpen className="w-10 h-10 text-purple-500" /> },
+    { title: "Faculty vs Department", path: "/admin/faculty-vs-dept", icon: <BarChart3 className="w-10 h-10 text-pink-500" /> },
   ];
 
   return (

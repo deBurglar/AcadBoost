@@ -8,6 +8,7 @@ const {getFacultyAssignmentsbyCourse,getAssignmentsByFaculty, getFaculties, getD
     getStudentCountForAllDepartments,
 } = require("../controller/adminanalysiscontrol")
 const authmidware = require('../middleware/authmidware')
+const { adminstudentpdf } = require('../controller/adminstudentpdf')
 
 
 adminRouter.post('/createcourse',authmidware,createCourse)
@@ -34,5 +35,8 @@ adminRouter.get('/student_attendance_per_course',authmidware,getCourseAttendance
 
 adminRouter.post("/course_analyse",authmidware,getFacultyAssignmentsbyCourse)
 adminRouter.post("/faculty_analyse",authmidware,getAssignmentsByFaculty)
+
+
+adminRouter.get('/export/pdf',adminstudentpdf)
 
 module.exports = adminRouter

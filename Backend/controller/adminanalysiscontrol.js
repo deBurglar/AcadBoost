@@ -253,7 +253,7 @@ const getAttendanceByDepartment = async (req, res) => {
       ...dept,
       students: Object.values(dept.students)
     }));
-
+    if(raw) return result;
     res.status(200).json(result);
 
   } catch (error) {
@@ -262,7 +262,7 @@ const getAttendanceByDepartment = async (req, res) => {
   }
 };
 
-const getStudentCountByDepartment = async (req, res) => {
+const getStudentCountByDepartment = async (req, res,raw=false) => {
   try {
     const { deptId } = req.params;
 
@@ -281,7 +281,7 @@ const getStudentCountByDepartment = async (req, res) => {
       role: "student",
       "studentProfile.department": deptId,
     });
-
+    
     return res.status(200).json({
       department: department.name,
       totalStudents,
@@ -293,7 +293,7 @@ const getStudentCountByDepartment = async (req, res) => {
 };
 // 
 // controller: getStudentCountForAllDepartments
-const getStudentCountForAllDepartments = async (req, res) => {
+const getStudentCountForAllDepartments = async (req, res,raw=false) => {
   try {
     // Fetch all departments
     const departments = await Department.find().select("name _id");
@@ -321,7 +321,7 @@ const getStudentCountForAllDepartments = async (req, res) => {
 };
 
 // Get number of students per year (across all departments)
-const getStudentCountPerYear = async (req, res) => {
+const getStudentCountPerYear = async (req, res,raw=false) => {
   try {
     const result = await User.aggregate([
       { $match: { role: "student" } },
@@ -347,7 +347,7 @@ const getStudentCountPerYear = async (req, res) => {
   }
 };
 
-const getStudentCountPerYearPerDepartment = async (req, res) => {
+const getStudentCountPerYearPerDepartment = async (req, res,raw=false) => {
   try {
     const result = await User.aggregate([
       { $match: { role: "student" } },
