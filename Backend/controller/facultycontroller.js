@@ -170,67 +170,66 @@ async function getFacultyDailyAttendance(req,res) {
 
 
 
-// attendace report for a date range
-async function getFacultyAttendanceReport(req,res) {
-    const {facultyId,startDate,endDate} = req.body
-    try {
-        // Normalize start and end dates
-        const start = new Date(startDate);
-        start.setHours(0, 0, 0, 0);
-        const end = new Date(endDate);
-        end.setHours(23, 59, 59, 999);
+// attendace report 
+const getFacultyAttendance = async (req, res) => {
+  try {
+    const facultyId = req.result._id; // assuming faculty is authenticated
+    const { courseId } = req.params; // frontend sends selected courseId
 
-        // Get faculty's courses
-        const courses = await Course.find({ faculty: facultyId }).select("_id subjectcode name");
-        const courseIds = courses.map(c => c._id);
+    // 1. Verify faculty teaches this course
+    const course = await Course.findOne({
+      _id: courseId,
+      faculty: facultyId
+    }).populate("faculty", "name");
 
-        if (courseIds.length === 0) return [];
-
-        // Aggregate attendance grouped by course and date
-        const attendanceData = await Attendance.aggregate([
-            {
-                $match: {
-                    course: { $in: courseIds },
-                    createdAt: { $gte: start, $lte: end }
-                }
-            },
-            {
-                $group: {
-                    _id: {
-                        course: "$course",
-                        day: {
-                            $dateToString: { format: "%Y-%m-%d", date: "$createdAt" }
-                        }
-                    },
-                    count: { $sum: 1 }
-                }
-            }
-        ]);
-
-        // Organize data: { courseId: { date: count, ... }, ... }
-        const report = {};
-
-        attendanceData.forEach(item => {
-            const courseId = item._id.course.toString();
-            const day = item._id.day;
-            if (!report[courseId]) report[courseId] = {};
-            report[courseId][day] = item.count;
-        });
-
-        // Format output with course info
-        const result = courses.map(course => ({
-            courseId: course._id,
-            subjectcode: course.subjectcode,
-            name: course.name,
-            attendanceByDay: report[course._id.toString()] || {}
-        }));
-
-        res.send(result);
-    } catch (err) {
-        console.error(err);
-        throw new Error("Error fetching attendance report");
+    if (!course) {
+      return res.status(403).json({ message: "You do not teach this course." });
     }
-}
+
+    // 2. Fetch all attendance records for this course
+    const attendanceRecords = await Attendance.find({ course: courseId })
+      .populate("student", "name emailId studentProfile.rollNumber")
+      .sort({ timestamp: -1 });
+
+    // 3. Group by sessionKey (each lecture)
+    const grouped = {};
+    attendanceRecords.forEach(record => {
+      if (!grouped[record.sessionKey]) {
+        grouped[record.sessionKey] = {
+          sessionKey: record.sessionKey,
+          timestamp: record.timestamp,
+          present: [],
+          absent: [] // we'll fill later
+        };
+      }
+      grouped[record.sessionKey].present.push(record.student);
+    });
+
+    // 4. Find all students enrolled in this course
+    const enrolledStudents = await User.find({
+      role: "student",
+      "studentProfile.department": { $in: course.department },
+      "studentProfile.year": course.year
+    }).select("name emailId studentProfile.rollNumber");
+
+    // 5. Fill absentees for each session
+    Object.values(grouped).forEach(session => {
+      const presentIds = session.present.map(s => s._id.toString());
+      session.absent = enrolledStudents.filter(
+        stu => !presentIds.includes(stu._id.toString())
+      );
+    });
+
+    res.json({
+      course: course.name,
+      sessions: Object.values(grouped)
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
 
 // const startDate = "2025-08-01";
 // const endDate = "2025-08-10";
@@ -388,6 +387,44 @@ const takeAttendance = async (req, res) => {
 };
 
 
+// Edit Attendance Controller
+const editAttendance = async (req, res) => {
+  try {
+    const facultyId = req.result._id;
+    const { courseId, sessionKey, updatedStudents } = req.body;
+
+    // ✅ Verify that this faculty teaches this course
+    const course = await Course.findOne({ _id: courseId, faculty: facultyId });
+    if (!course) {
+      return res.status(403).json({ error: "You are not assigned to this course" });
+    }
+
+    // ✅ Remove duplicates in updatedStudents
+    const uniqueStudents = [...new Set(updatedStudents)];
+
+    // ✅ Delete old attendance records for this session
+    await Attendance.deleteMany({ course: courseId, sessionKey });
+
+    // ✅ Insert new updated attendance records
+    const attendanceDocs = uniqueStudents.map((studentId) => ({
+      student: studentId,
+      course: courseId,
+      sessionKey,
+    }));
+
+    await Attendance.insertMany(attendanceDocs, { ordered: false });
+
+    res.json({
+      message: "Attendance updated successfully ✅",
+      count: attendanceDocs.length,
+    });
+  } catch (err) {
+    console.error("Edit Attendance Error:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+
 // get info of this students by course
 const studentinmycourse = async (req, res) => {
   try {
@@ -464,7 +501,7 @@ const getMyCourses = async (req, res) => {
 };
 // get the info of low attendes
 
-module.exports = {getFacultyScheduleGrouped,getFacultyDailyAttendance,getFacultyAttendanceReport,
+module.exports = {getFacultyScheduleGrouped,getFacultyDailyAttendance,getFacultyAttendance,
     studentinmycourse,takeAttendance,getMyCourses,
-    getFacultyLastAttendance,startAttendance,studentsInMyDepartment
+    getFacultyLastAttendance,startAttendance,studentsInMyDepartment,editAttendance
 }

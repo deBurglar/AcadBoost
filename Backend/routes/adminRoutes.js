@@ -9,6 +9,7 @@ const {getFacultyAssignmentsbyCourse,getAssignmentsByFaculty, getFaculties, getD
 } = require("../controller/adminanalysiscontrol")
 const authmidware = require('../middleware/authmidware')
 const { adminstudentpdf } = require('../controller/adminstudentpdf')
+const { getFacultyAttendance } = require('../controller/facultycontroller')
 
 
 adminRouter.post('/createcourse',authmidware,createCourse)
@@ -20,8 +21,10 @@ adminRouter.post('/createroom',authmidware,createRoom)
 
 adminRouter.get('/getdepartments',authmidware,getDepartments)
 adminRouter.get('/getfaculties',authmidware,getFaculties)
+
 adminRouter.get('/getrooms',authmidware,getRooms)
 adminRouter.get("/presenttimetable/:deptId",authmidware,getDepartmentTimetable)
+
 // analusis
 // studentcount v/s dept
 adminRouter.get('/studentcountbydept/all',authmidware,getStudentCountForAllDepartments)

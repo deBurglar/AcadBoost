@@ -3,6 +3,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "../ui/tabs";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "../ui/card";
 import { Badge } from "../ui/badge";
 import axiosClient from "../../lib/axiosClient";
+import { useNavigate } from "react-router";
+
 
 type Course = {
   _id: string;
@@ -25,6 +27,8 @@ export default function Courses() {
   const [attendance, setAttendance] = useState<Attendance[]>([]);
   const [loading, setLoading] = useState(true);
 
+
+  const navigate = useNavigate()
    useEffect(() => {
     const fetchData = async () => {
       try {
@@ -84,7 +88,8 @@ export default function Courses() {
           const att = attendance.find((a) => a.courseId === course._id);
 
           return (
-            <Card key={course._id} className="border-0 shadow-lg">
+            <Card key={course._id} className="border-0 shadow-lg"
+              onClick={() => navigate(`view_attendance/${course._id}`)}>
               <CardHeader className="bg-gradient-to-br from-yellow-300 to-indigo-300 px-4 py-3 rounded-2xl text-white">
                 <CardTitle>{course.name}</CardTitle>
                 <CardDescription>
@@ -134,7 +139,9 @@ export default function Courses() {
           const att = attendance.find((a) => a.courseId === course._id);
 
           return (
-            <Card key={course._id} className="border-0 shadow-lg">
+            <Card key={course._id} className="border-0 shadow-lg"
+            onClick={() => navigate(`/faculty/attendance/courses/view_attendance/${course._id}`)}
+            >
               <CardHeader className="bg-gradient-to-r from-red-200 to-pink-400 px-4 py-3 rounded-2xl text-white">
                 <CardTitle>{course.name}</CardTitle>
                 <CardDescription>

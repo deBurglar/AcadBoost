@@ -24,6 +24,7 @@ import { registerServiceWorker, subscribeUser } from "./lib/pushManager";
 import axiosClient from './lib/axiosClient';
 import StudentDeptAnalytics from './components/Admin/Analysis/studentvsDept';
 import DepartmentAttendanceDashboard from './components/Admin/Analysis/departmentvsattendance';
+import ViewAttendance from './components/FacultyPage/viewAttendance';
 function App() {
 
 const { isAuthenticated, user } = useSelector(
@@ -132,7 +133,9 @@ const { isAuthenticated, user } = useSelector(
       <Route path="/faculty" element={<FacultyLayout/>}>
         <Route index element={<Faculty />} />
         <Route path="attendance" element={<Attendance />} />
+        
         <Route path="attendance/courses" element={<Courses />} />
+        <Route path='attendance/courses/view_attendance/:courseId' element={<ViewAttendance/>}/>
       </Route>
       <Route path="attendance/take/:courseId" element={<TakeAttendance />} />
       </>

@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
-import { ClipboardList, FileText,BarChart3,BookOpen } from "lucide-react";
+import { FileText,BarChart3,BookOpen } from "lucide-react";
 import { useNavigate } from "react-router";
 import { useState } from "react";
 
@@ -9,21 +9,7 @@ export default function Attendance() {
      const [showReports, setShowReports] = useState(false);
   return (
     <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-      {/* Take Attendance Card */}
-      <Card className="shadow-lg rounded-2xl hover:shadow-xl transition">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-xl">
-            <ClipboardList className="w-6 h-6" /> Take Attendance
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-gray-600 mb-4">
-            Record and manage student attendance quickly.
-          </p>
-          <Button className="w-full">Start Now</Button>
-        </CardContent>
-      </Card>
-
+      
       {/* View Reports Card */}
       <Card className="shadow-lg rounded-2xl hover:shadow-xl transition">
         <CardHeader>
