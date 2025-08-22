@@ -157,6 +157,7 @@ const EditTimeTable = () => {
   const checkconflict = async () => {
     try {
       const payload = formatForBackend(timetable);
+      console.log(payload)
       const res = await axiosClient.post(`/admin/conflict/${deptId}`, payload);
 
       if (res.data.ok) {

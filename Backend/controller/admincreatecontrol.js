@@ -265,39 +265,76 @@ async function createDepartmentTimetable(req, res) {
 }
 
 
-function flattenTimetable(timetableObj) {
-  const routine = [];
-  for (const day in timetableObj) {
-    for (const time in timetableObj[day]) {
-      const cell = timetableObj[day][time];
-      if (!cell) continue;
+// timetableObj = raw object from frontend
+// Returns routine[] with ObjectIds for course, faculty, room
+async function flattenTimetable(timetableObj) {
+  const subjectSet = new Set();
+  const facultySet = new Set();
+  const roomSet = new Set();
 
-      // Ignore TBA slots
-      if (cell.subject === "TBA") continue;
+  // Collect unique names
+  for (const [day, slots] of Object.entries(timetableObj)) {
+    if (!slots || typeof slots !== "object") continue;
+    for (const [time, { subject, faculty, room } = {}] of Object.entries(slots)) {
+      if (subject && subject !== "TBA") subjectSet.add(subject.trim());
+      if (faculty && faculty !== "TBA") facultySet.add(faculty.trim());
+      if (room && room !== "TBA") roomSet.add(room.trim());
+    }
+  }
+
+  // Bulk fetch matches
+  const [courses, faculties, rooms] = await Promise.all([
+    Course.find({ name: { $in: Array.from(subjectSet) } }).select("_id name"),
+    User.find({ name: { $in: Array.from(facultySet) }, role: "faculty" }).select("_id name"),
+    Room.find({ name: { $in: Array.from(roomSet) } }).select("_id name"),
+  ]);
+
+  // Build lookup maps (case-insensitive)
+  const key = (s) => s.trim().toLowerCase();
+  const courseMap = new Map(courses.map((c) => [key(c.name), c._id]));
+  const facultyMap = new Map(faculties.map((f) => [key(f.name), f._id]));
+  const roomMap = new Map(rooms.map((r) => [key(r.name), r._id]));
+
+  // Flatten into routine[]
+  const routine = [];
+  for (const [day, slots] of Object.entries(timetableObj)) {
+    if (!slots || typeof slots !== "object") continue;
+    for (const [time, details] of Object.entries(slots)) {
+      if (!details) continue;
+
+      const subj = details.subject?.trim();
+      const fac = details.faculty?.trim();
+      const rm = details.room?.trim();
 
       routine.push({
         day,
         time,
-        subject: cell.subject,
-        faculty: cell.faculty,
-        room: cell.room
+        course: subj && subj !== "TBA" ? courseMap.get(key(subj)) ?? null : null,
+        faculty: fac && fac !== "TBA" ? facultyMap.get(key(fac)) ?? null : null,
+        room: rm && rm !== "TBA" ? roomMap.get(key(rm)) ?? null : null,
       });
     }
   }
+
   return routine;
 }
+
 async function conflict(req, res) {
   try {
     const { deptId } = req.params;
-    const newRoutine = flattenTimetable(req.body);
+
+    // Normalize incoming timetable to routine[] with ObjectIds
+    const newRoutine = await flattenTimetable(req.body);
 
     const deptIdObj = new mongoose.Types.ObjectId(deptId);
 
+    // Fetch all other depts with populated routine
     const otherDepts = await Department.find({ _id: { $ne: deptIdObj } })
       .populate("routine.faculty", "name")
       .populate("routine.room", "name")
       .lean();
 
+    // --- Conflict Check ---
     for (const entry of newRoutine) {
       const { day, time, faculty, room } = entry;
 
@@ -312,34 +349,36 @@ async function conflict(req, res) {
 
           if (!times.includes(time)) continue;
 
-          // --- Check Room Conflict ---
-          if (room && r.room && room === r.room.name) {
+          // --- Room Conflict ---
+          if (room && r.room && room.toString() === r.room._id.toString()) {
             return res.json({
               ok: false,
               conflictWith: dept._id,
-              message: `Room conflict with department ${dept._id} in room ${r.room.name} at ${day} ${time}`
+              message: `Room conflict: ${r.room.name} is already booked by department ${dept.name} at ${day} ${time}`
             });
           }
 
-          // --- Check Faculty Conflict ---
-          if (faculty && r.faculty && faculty === r.faculty.name) {
+          // --- Faculty Conflict ---
+          if (faculty && r.faculty && faculty.toString() === r.faculty._id.toString()) {
             return res.json({
               ok: false,
               conflictWith: dept._id,
-              message: `Faculty conflict with department ${dept._id}. Faculty ${r.faculty.name} is already teaching at ${day} ${time}`
+              message: `Faculty conflict: ${r.faculty.name} is already teaching for department ${dept.name} at ${day} ${time}`
             });
           }
         }
       }
     }
 
-    // No conflicts
+    // ✅ No conflicts
     res.json({ ok: true });
+
   } catch (err) {
-    console.error(err);
+    console.error("Conflict check failed:", err);
     res.status(500).json({ ok: false, error: err.message });
   }
 }
+
 
 // creating this function 
 const publishRoutine = async (req, res) => {
