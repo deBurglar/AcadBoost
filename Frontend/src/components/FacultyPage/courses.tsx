@@ -151,7 +151,7 @@ export default function Courses() {
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-medium">{att.courseName}</span>
                       <Badge className="bg-green-100 text-green-700">
-                        {att.lastAttendance.presentCount} present
+                        {att.lastAttendance.presentCount} present out of {att.totalStudents}
                       </Badge>
                     </div>
                     <div className="w-full bg-green-200 rounded-full h-2">

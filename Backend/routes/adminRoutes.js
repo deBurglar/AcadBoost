@@ -5,6 +5,7 @@ const {getFacultyAssignmentsbyCourse,getAssignmentsByFaculty, getFaculties, getD
     getStudentCountByDepartment, getStudentCountPerYear, getStudentCountPerYearPerDepartment,
     getAttendanceGroupedByDepartment,
     getCourseAttendanceStatsByDepartment,
+    getStudentCountForAllDepartments,
 } = require("../controller/adminanalysiscontrol")
 const authmidware = require('../middleware/authmidware')
 
@@ -22,6 +23,7 @@ adminRouter.get('/getrooms',authmidware,getRooms)
 adminRouter.get("/presenttimetable/:deptId",authmidware,getDepartmentTimetable)
 // analusis
 // studentcount v/s dept
+adminRouter.get('/studentcountbydept/all',authmidware,getStudentCountForAllDepartments)
 adminRouter.get('/studentcountbydept/:deptId',authmidware,getStudentCountByDepartment)
 adminRouter.get('/studentcountbyyear',authmidware,getStudentCountPerYear)
 adminRouter.get('/studentcountperyearperdept',authmidware,getStudentCountPerYearPerDepartment)

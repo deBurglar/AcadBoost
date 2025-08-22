@@ -22,6 +22,7 @@ import StudentRoutine from './pages/Student';
 import { addNotification } from "./notificationslice";
 import { registerServiceWorker, subscribeUser } from "./lib/pushManager";
 import axiosClient from './lib/axiosClient';
+import StudentDeptAnalytics from './components/Admin/Analysis/studentvsDept';
 function App() {
 
 const { isAuthenticated, user } = useSelector(
@@ -118,6 +119,7 @@ const { isAuthenticated, user } = useSelector(
         <Route path="attendance/courses" element={<Courses />} />
       </Route>
       <Route path="attendance/take/:courseId" element={<TakeAttendance />} />
+      
       </>
     ) : (
       <Route path="/student/*" element={<Navigate to="/" />} />
@@ -145,6 +147,7 @@ const { isAuthenticated, user } = useSelector(
         <Route path="create" element={<Create />} />
         
         <Route path="analysis" element={<Analyse />} />
+        <Route path="student-vs-dept" element={<StudentDeptAnalytics />} />
       </Route>
       <Route path="/edit/:deptId" element={<EditTimeTable />} />
       </>

@@ -89,7 +89,7 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
         <CardHeader className="text-center">
           <CardTitle className="flex items-center justify-center gap-2">
             {success ? <CheckCircle className="w-5 h-5 text-green-600" /> : <User className="w-5 h-5" />}
-            {success ? 'Login Successful!' : 'Login to EduSchedule Pro'}
+            {success ? 'Login Successful!' : 'Login to AcadBoost'}
           </CardTitle>
           <CardDescription>
             {success ? 'Redirecting to dashboard...' : 'Access your personalized dashboard'}

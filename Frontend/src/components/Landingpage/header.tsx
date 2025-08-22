@@ -19,7 +19,7 @@ export default function Header({ user,setLoginModalOpen }: HeaderProps)
                 <GraduationCap className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">EduSchedule Pro</h1>
+                <h1 className="text-xl font-bold text-gray-900">AcadBoost Pro</h1>
                 <p className="text-sm text-gray-500">Smart Academic Management</p>
               </div>
             </div>

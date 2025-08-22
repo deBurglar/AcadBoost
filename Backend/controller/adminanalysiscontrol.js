@@ -291,6 +291,34 @@ const getStudentCountByDepartment = async (req, res) => {
     return res.status(500).json({ message: "Internal Server Error" });
   }
 };
+// 
+// controller: getStudentCountForAllDepartments
+const getStudentCountForAllDepartments = async (req, res) => {
+  try {
+    // Fetch all departments
+    const departments = await Department.find().select("name _id");
+
+    // For each department, count students
+    const results = await Promise.all(
+      departments.map(async (dept) => {
+        const totalStudents = await User.countDocuments({
+          role: "student",
+          "studentProfile.department": dept._id,
+        });
+
+        return {
+          department: dept.name,
+          totalStudents,
+        };
+      })
+    );
+
+    return res.status(200).json(results);
+  } catch (error) {
+    console.error("Error fetching student counts by department:", error);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+};
 
 // Get number of students per year (across all departments)
 const getStudentCountPerYear = async (req, res) => {
@@ -600,5 +628,5 @@ const getCourseAttendanceStatsByDepartment = async (req, res) => {
 
 module.exports = { getFacultyAssignmentsbyCourse ,getAssignmentsByFaculty,getAttendanceByDepartment,getFaculties,getDepartments,getDepartmentTimetable,getRooms,
   getStudentCountByDepartment,getStudentCountPerYear,getStudentCountPerYearPerDepartment,
-  getAttendanceGroupedByDepartment,getCourseAttendanceStatsByDepartment
+  getAttendanceGroupedByDepartment,getCourseAttendanceStatsByDepartment,getStudentCountForAllDepartments
 };

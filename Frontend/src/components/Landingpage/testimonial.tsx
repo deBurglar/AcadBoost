@@ -16,7 +16,7 @@ export function Testimonials(){
                 name: "Dr. Sarah Johnson",
                 role: "Academic Director",
                 institution: "Metropolitan University",
-                content: "EduSchedule Pro transformed our scheduling process. What used to take weeks now takes hours, and conflicts are virtually eliminated.",
+                content: "AcadBoost Pro transformed our scheduling process. What used to take weeks now takes hours, and conflicts are virtually eliminated.",
                 rating: 5
               },
               {
