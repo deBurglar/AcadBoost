@@ -29,6 +29,49 @@ const EditTimeTable = () => {
   // temp selections for the add form
   const [tempSelection, setTempSelection] = useState<{ courseId?: string; facultyId?: string; roomId?: string; manualCourseName?: string; manualSubjectcode?: string }>({});
 
+  // --- normalize backend timetable object -> array the UI expects ---
+  const normalizeTimetable = (timetableObj: any, roomsList: any[] = [], facultiesList: any[] = []) => {
+    if (!timetableObj) return [];
+
+    // If the backend already returned an array (defensive), return it unchanged
+    if (Array.isArray(timetableObj)) return timetableObj;
+
+    const arr: any[] = [];
+    for (const [day, slots] of Object.entries(timetableObj)) {
+      if (!slots || typeof slots !== "object") continue;
+      for (const [time, cell] of Object.entries(slots as any)) {
+        // cell may be { subject, faculty, room } or "TBA"
+        const subject = cell?.subject || (typeof cell === "string" ? cell : null);
+        const facultyName = cell?.faculty;
+        const roomName = cell?.room;
+
+        // Attempt to map names back to actual faculty/room objects (best effort)
+        const matchedFaculty = facultiesList.find(
+          (f) =>
+            f &&
+            (f.name === facultyName ||
+              f.facultyProfile?.shortName === facultyName ||
+              `${f.name}` === facultyName)
+        ) || null;
+
+        const matchedRoom = roomsList.find((r) => r && (r.name === roomName || `${r.name}` === roomName)) || null;
+
+        arr.push({
+          _id: `${day}-${time}`, // stable unique id
+          day,
+          time,
+          course:
+            subject && subject !== "TBA"
+              ? { name: subject, subjectcode: (cell?.subjectcode || "").toString() }
+              : null,
+          faculty: matchedFaculty,
+          room: matchedRoom,
+        });
+      }
+    }
+    return arr;
+  };
+
   useEffect(() => {
     if (!deptId) return;
 
@@ -41,10 +84,19 @@ const EditTimeTable = () => {
           axiosClient.get("/admin/getfaculties"),
         ]);
 
-        setTimetable(ttRes.data.department.timetable || []);
-        setDepartment(ttRes.data.department || null);
-        setRooms(roomRes.data.data || []);
-        setFaculties(facRes.data.data || []);
+        const roomsData = roomRes.data.data || [];
+        const facData = facRes.data.data || [];
+        setRooms(roomsData);
+        setFaculties(facData);
+
+        const deptObj = ttRes.data.department || null;
+        setDepartment(deptObj);
+
+        // attempt to locate timetable in either { department: { timetable: {...} } } or direct { timetable: {...} }
+        const rawTimetable =
+          ttRes.data.department?.timetable ?? ttRes.data.timetable ?? ttRes.data?.routine ?? ttRes.data;
+
+        setTimetable(normalizeTimetable(rawTimetable, roomsData, facData));
 
         // try to fetch department courses (backend endpoint assumed)
         try {
@@ -54,21 +106,17 @@ const EditTimeTable = () => {
           // fallback: if endpoint not available, try another common endpoint
           try {
             const coursesRes2 = await axiosClient.get(`/admin/getcourses`);
-            // if this endpoint returns many courses, filter by year/department if possible
             const allCourses = coursesRes2.data.data || [];
-            // try to filter by department code or year using department info
-            if (department && department.name) {
-              // best-effort filter: keep courses that list the department in their department array
+            if (deptObj && deptObj.name) {
               const filtered = allCourses.filter((c: any) => {
                 if (!c.department) return false;
-                return c.department.some((d: any) => d._id === deptId || d.name === department.name);
+                return c.department.some((d: any) => d._id === deptId || d.name === deptObj.name);
               });
               setDepartmentCourses(filtered.length ? filtered : allCourses);
             } else {
               setDepartmentCourses(allCourses);
             }
           } catch (err) {
-            // ignore — departmentCourses will stay empty and user can still add a manual "New Course"
             setDepartmentCourses([]);
           }
         }
@@ -176,8 +224,12 @@ const EditTimeTable = () => {
       if (!deptId) return;
       setLoading(true);
 
-      const res = await axiosClient.post(`/admin/regenerate/${deptId}`);
-      setTimetable(res.data.timetable); // assuming backend returns { timetable: [...] }
+      const res = await axiosClient.get(`/admin/createtimetable/${deptId}`);
+
+      // backend might return object as res.data.timetable or res.data.department.timetable
+      const raw = res.data.timetable ?? res.data.department?.timetable ?? res.data;
+      // use current rooms/faculties state to try to map names back to objects
+      setTimetable(normalizeTimetable(raw, rooms, faculties));
       alert("✅ Timetable regenerated successfully!");
     } catch (err) {
       console.error("Regenerate failed", err);
@@ -366,17 +418,17 @@ const EditTimeTable = () => {
                                   onClick={() => {
                                     // if manual course chosen, create a fake course object inline
                                     if (tempSelection.courseId === "manual") {
-                                    const manualCourse = {
-                                      name: (tempSelection.manualCourseName || "New Course").trim(),
-                                      subjectcode: (tempSelection.manualSubjectcode || "TBA").toString().trim(),
-                                    };
-                                    addSlot(day, time, {
-                                      courseObj: manualCourse,
-                                      facultyId: tempSelection.facultyId,
-                                      roomId: tempSelection.roomId,
-                                    });
-                                    return;
-                                  }
+                                      const manualCourse = {
+                                        name: (tempSelection.manualCourseName || "New Course").trim(),
+                                        subjectcode: (tempSelection.manualSubjectcode || "TBA").toString().trim(),
+                                      };
+                                      addSlot(day, time, {
+                                        courseObj: manualCourse,
+                                        facultyId: tempSelection.facultyId,
+                                        roomId: tempSelection.roomId,
+                                      });
+                                      return;
+                                    }
 
                                     // normal flow: use selected course id
                                     addSlot(day, time, {
