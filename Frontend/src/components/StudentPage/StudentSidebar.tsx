@@ -5,7 +5,7 @@ const StudentSidebar = () => {
   const { pathname } = useLocation();
 
   const menu = [
-    { name: 'My Routine', path: '/routine',icon: ArrowUpNarrowWide },
+    { name: 'My Routine', path: '/student',icon: ArrowUpNarrowWide },
     { name: 'Anaysis', path: '/student/attendance/analysis' ,icon: CalendarDays },
   ];
 

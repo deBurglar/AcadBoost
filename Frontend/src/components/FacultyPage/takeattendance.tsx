@@ -29,8 +29,16 @@ export default function AttendancePage() {
   const [courseName, setCourseName] = useState<string>("");
   const [qrSession, setQrSession] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState<number>(20);
+  const [isBeaconActive, setIsBeaconActive] = useState(false);
 
-  //  Fetch students for manual attendance
+  // 🔹 Bluetooth simulation state
+  const [bluetoothAllowed, setBluetoothAllowed] = useState(false);
+  const [bluetoothOn, setBluetoothOn] = useState(false);
+
+  // 🔹 Chatbot state
+  const [isChatOpen, setIsChatOpen] = useState(false);
+
+  // Fetch students for manual attendance
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -46,14 +54,14 @@ export default function AttendancePage() {
     fetchData();
   }, [courseId]);
 
-  //  Toggle manual attendance
+  // Toggle manual attendance
   const toggleAttendance = (idx: number) => {
     setStudents((prev) =>
       prev.map((s, i) => (i === idx ? { ...s, present: !s.present } : s))
     );
   };
 
-  //  Submit manual attendance
+  // Submit manual attendance
   const handleSubmit = async () => {
     try {
       const presentStudents = students
@@ -72,46 +80,66 @@ export default function AttendancePage() {
     }
   };
 
-  //  Start QR auto-refresh loop
+  // Start QR Attendance with Bluetooth simulation
   const startQR = async () => {
     try {
+      // Step 1: Ask permission
+      const allow = window.confirm(
+        "This feature requires Bluetooth. Do you allow access?"
+      );
+      if (!allow) {
+        setBluetoothAllowed(false);
+        return;
+      }
+      setBluetoothAllowed(true);
+
+      // Step 2: Ask to turn on Bluetooth
+      const turnOn = window.confirm(
+        "Please turn ON your Bluetooth to act as a beacon."
+      );
+      if (!turnOn) {
+        setBluetoothOn(false);
+        return;
+      }
+      setBluetoothOn(true);
+
+      // Step 3: Start QR Session & activate beacon simulation
       const { data } = await axiosClient.post("/faculty/startattendance", {
         courseId,
       });
       setQrSession(data.sessionKey);
+      setIsBeaconActive(true);
     } catch (err) {
       console.error("Error starting QR session", err);
     }
   };
 
-  //  Refresh QR every 20s (once started)
- useEffect(() => {
-  if (!qrSession) return;
+  // Refresh QR every 20s
+  useEffect(() => {
+    if (!qrSession) return;
 
-  // countdown timer
-  setTimeLeft(20);
-  const timer = setInterval(() => {
-    setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
-  }, 1000);
+    setTimeLeft(20);
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
 
-  // QR refresh
-  const qrInterval = setInterval(async () => {
-    try {
-      const { data } = await axiosClient.post("/faculty/startattendance", {
-        courseId,
-      });
-      setQrSession(data.sessionKey);
-      setTimeLeft(20); // reset timer after refresh
-    } catch (err) {
-      console.error("Error refreshing QR session", err);
-    }
-  }, 20000);
+    const qrInterval = setInterval(async () => {
+      try {
+        const { data } = await axiosClient.post("/faculty/startattendance", {
+          courseId,
+        });
+        setQrSession(data.sessionKey);
+        setTimeLeft(20);
+      } catch (err) {
+        console.error("Error refreshing QR session", err);
+      }
+    }, 20000);
 
-  return () => {
-    clearInterval(timer);
-    clearInterval(qrInterval);
-  };
-}, [qrSession, courseId]);
+    return () => {
+      clearInterval(timer);
+      clearInterval(qrInterval);
+    };
+  }, [qrSession, courseId]);
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
@@ -173,12 +201,50 @@ export default function AttendancePage() {
               </p>
               <QRCodeCanvas value={qrSession} size={200} />
               <p className="mt-2 text-sm text-gray-500">
-               Refreshing in <span className="font-bold">{timeLeft}</span> sec
+                Refreshing in <span className="font-bold">{timeLeft}</span> sec
               </p>
+
+              {bluetoothAllowed && !bluetoothOn && (
+                <p className="mt-4 text-yellow-600 font-semibold">
+                  ⚠️ Please turn ON your Bluetooth to continue.
+                </p>
+              )}
+
+              {isBeaconActive && (
+                <p className="mt-4 text-green-600 font-semibold">
+                  📡 Faculty device is SIMULATING a Bluetooth Beacon…
+                </p>
+              )}
             </div>
           )}
         </div>
       </div>
+
+      {/* 🔹 Chatbot Side Panel */}
+      {isChatOpen && (
+        <div className="fixed inset-y-0 right-0 w-1/3 bg-gradient-to-tl from-green-800 to-black z-40 transform transition-transform duration-300 ease-in-out border-l border-gray-700 overflow-y-auto p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold text-white">AI Chatbot</h2>
+            <button
+              onClick={() => setIsChatOpen(false)}
+              className="text-white text-lg hover:text-red-400"
+            >
+              ✕
+            </button>
+          </div>
+          <div className="text-white">
+            <p>Hello 👋 I’m your AI helper!</p>
+          </div>
+        </div>
+      )}
+
+      {/* 🔹 Floating Chatbot Button */}
+      <button
+        onClick={() => setIsChatOpen(true)}
+        className="fixed bottom-6 right-6 bg-green-600 text-white rounded-full shadow-lg p-4 hover:bg-green-700 transition z-50"
+      >
+        💬
+      </button>
     </div>
   );
 }

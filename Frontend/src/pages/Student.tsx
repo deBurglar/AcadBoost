@@ -199,26 +199,27 @@ const StudentRoutine: React.FC = () => {
       </div>
 
       {/* Chatbot Side Panel */}
-      {isChatOpen && (
-        <div className="fixed inset-y-0 right-0 w-1/3 bg-gradient-to-tl from-green-800 to-black z-40 transform transition-transform duration-300 ease-in-out border-l border-gray-700 overflow-y-auto p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold text-white">AI Chatbot</h2>
-            <button
-              onClick={() => setIsChatOpen(false)}
-              className="text-white text-lg hover:text-red-400"
-            >
-              ✕
-            </button>
-          </div>
-          {/* Replace this with your actual HintAi component */}
-          <div className="text-white">
-            {/* <HintAi /> */}
-            <HintAi/>
-            <p>Hello 👋 I’m your AI helper!</p>
-          </div>
-        </div>
-      )}
+     {isChatOpen && (
+  <div className="fixed bottom-20 right-6 w-[400px] h-[500px] z-[9999]">
+    <div className="bg-gray-900 rounded-2xl shadow-2xl border border-gray-700 relative h-full flex flex-col">
+      {/* Header */}
+      <div className="flex justify-between items-center p-3 border-b border-gray-700">
+        <h2 className="text-white font-semibold">AI Assistant</h2>
+        <button
+          onClick={() => setIsChatOpen(false)}
+          className="text-white hover:text-red-400 text-lg"
+        >
+          ✕
+        </button>
+      </div>
 
+      {/* Chat Component */}
+      <div className="flex-1 overflow-hidden">
+        <HintAi />
+      </div>
+    </div>
+  </div>
+)}
       {/* Floating Chatbot Button */}
       <button
         onClick={() => setIsChatOpen(true)}
