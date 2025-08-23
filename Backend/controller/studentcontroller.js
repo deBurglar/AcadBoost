@@ -1,5 +1,5 @@
 const Attendance = require("../models/attendance");
-
+const Course = require("../models/courses.js")
 const User =require( "../models/user.js");
 const Department = require ("../models/department.js");
 
@@ -53,6 +53,56 @@ const getStudentRoutine = async (req, res) => {
 };
 
 
+ const getMyAttendance = async (req, res) => {
+  try {
+    const studentId = req.result._id;
+
+    const threshold = 40; // attendance % threshold
+
+    // Get all courses student has attended at least once
+    const attendedCourses = await Attendance.find({ student: studentId }).distinct("course");
+
+    let results = [];
+
+    for (const courseId of attendedCourses) {
+      // Total sessions held for this course
+      const totalSessions = await Attendance.find({ course: courseId }).distinct("sessionKey");
+      const total = totalSessions.length;
+
+      // Sessions attended by this student
+      const attendedSessions = await Attendance.find({ student: studentId, course: courseId }).distinct("sessionKey");
+      const attended = attendedSessions.length;
+
+      const percentage = total > 0 ? (attended / total) * 100 : 0;
+
+      // Get course info
+      const course = await Course.findById(courseId).select("name subjectcode");
+
+      results.push({
+        course: {
+          _id: course._id,
+          name: course.name,
+          subjectcode: course.subjectcode
+        },
+        attended,
+        total,
+        percentage: percentage.toFixed(2),
+        warning: percentage < threshold
+      });
+    }
+
+    return res.json({
+      student: studentId,
+      courses: results
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+
 // check attendance
 
 
@@ -81,5 +131,5 @@ const markattendancebyQR = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
-module.exports={markattendancebyQR,getStudentRoutine}
+module.exports={markattendancebyQR,getStudentRoutine,getMyAttendance}
 

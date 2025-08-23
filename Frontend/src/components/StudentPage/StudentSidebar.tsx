@@ -6,7 +6,7 @@ const StudentSidebar = () => {
 
   const menu = [
     { name: 'My Routine', path: '/routine',icon: ArrowUpNarrowWide },
-    { name: 'Anaysis', path: '/student/analysis' ,icon: CalendarDays },
+    { name: 'Anaysis', path: '/student/attendance/analysis' ,icon: CalendarDays },
   ];
 
   return (
