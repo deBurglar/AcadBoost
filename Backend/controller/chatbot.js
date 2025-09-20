@@ -6,7 +6,6 @@ const ai = new GoogleGenAI({apiKey:process.env.GEMINI_API});
 const HintAi = (req,res)=>{
 try{
     const {messages} = req.body
-
 async function main() {
   const response = await ai.models.generateContent({
     model: "gemini-2.5-flash",

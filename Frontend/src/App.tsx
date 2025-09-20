@@ -104,8 +104,7 @@ const { isAuthenticated, user } = useSelector(
   return (
     <>
     <BrowserRouter>
-      <Routes>
-
+      <Routes>        
         {/* Landing Page */}
         <Route path="/" element={isAuthenticated ? (
       user?.role === "student" ? (<Navigate to="/student" />) : user?.role === "faculty" ? (<Navigate to="/faculty" />) : user?.role === "admin" ? (<Navigate to="/admin" />
@@ -165,8 +164,6 @@ const { isAuthenticated, user } = useSelector(
       
       
     )}
-
-  
       </Routes>
     </BrowserRouter>
     </>

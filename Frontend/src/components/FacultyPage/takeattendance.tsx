@@ -141,110 +141,127 @@ export default function AttendancePage() {
     };
   }, [qrSession, courseId]);
 
-  return (
-    <div className="p-6 max-w-5xl mx-auto">
-      <h2 className="text-2xl font-bold mb-6">
-        Attendance for {courseName}
+return (
+  <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50 p-6">
+    <header className="mb-6 text-center">
+      <h2 className="text-3xl font-bold text-gray-900">
+        Attendance —{" "}
+        <span className="bg-gradient-to-r from-blue-600 to-green-500 bg-clip-text text-transparent">
+          {courseName}
+        </span>
       </h2>
+      <p className="text-gray-500 text-sm mt-1">
+        Manage attendance manually or via QR
+      </p>
+    </header>
 
-      <div className="grid grid-cols-2 gap-6">
-        {/* 🔹 Manual Attendance Section */}
-        <div>
-          <h3 className="text-xl font-semibold mb-4">Manual Attendance</h3>
-          <ul className="space-y-3">
-            {students.map((student, idx) => (
-              <li
-                key={student._id}
-                className="flex items-center justify-between p-4 bg-gray-100 rounded-xl shadow-sm"
-              >
-                <div>
-                  <p className="font-medium">{student.name}</p>
-                  <p className="text-sm text-gray-600">{student.emailId}</p>
-                </div>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-6xl mx-auto">
+      {/* Manual Attendance */}
+      <section className="backdrop-blur-xl bg-white/70 border border-white/40 rounded-2xl shadow-lg p-5">
+        <h3 className="text-lg font-semibold mb-4 text-gray-800">
+          Manual Attendance
+        </h3>
 
-                <button
-                  onClick={() => toggleAttendance(idx)}
-                  className={`px-4 py-2 rounded-xl transition ${
-                    student.present
-                      ? "bg-green-500 text-white"
-                      : "bg-gray-300 text-black"
-                  }`}
-                >
-                  {student.present ? "Present" : "Mark Present"}
-                </button>
-              </li>
-            ))}
-          </ul>
-
-          <button
-            onClick={handleSubmit}
-            className="mt-6 w-full py-3 rounded-xl font-medium bg-blue-600 text-white"
-          >
-            Submit The Attendance
-          </button>
-        </div>
-
-        {/* 🔹 QR Attendance Section */}
-        <div className="text-center">
-          <h3 className="text-xl font-semibold mb-4">QR Attendance</h3>
-          {!qrSession ? (
-            <button
-              onClick={startQR}
-              className="py-3 px-6 rounded-xl font-medium bg-green-600 text-white"
+        <ul className="space-y-2 max-h-[380px] overflow-y-auto">
+          {students.map((student, idx) => (
+            <li
+              key={student._id}
+              className="flex items-center justify-between p-3 bg-gray-100 rounded-xl hover:shadow transition"
             >
-              Start QR Attendance
-            </button>
-          ) : (
-            <div className="mt-4 flex flex-col items-center">
-              <p className="mb-3 font-medium">
-                Students: Scan this QR to mark attendance
-              </p>
-              <QRCodeCanvas value={qrSession} size={200} />
-              <p className="mt-2 text-sm text-gray-500">
-                Refreshing in <span className="font-bold">{timeLeft}</span> sec
-              </p>
+              <div>
+                <p className="font-medium text-gray-900">{student.name}</p>
+                <p className="text-xs text-gray-500">{student.emailId}</p>
+              </div>
 
-              {bluetoothAllowed && !bluetoothOn && (
-                <p className="mt-4 text-yellow-600 font-semibold">
-                  ⚠️ Please turn ON your Bluetooth to continue.
-                </p>
-              )}
+              <button
+                onClick={() => toggleAttendance(idx)}
+                className={`px-4 py-1.5 rounded-full text-xs font-semibold transition ${
+                  student.present
+                    ? "bg-green-500 text-white hover:bg-green-600"
+                    : "bg-gray-300 text-gray-800 hover:bg-gray-400"
+                }`}
+              >
+                {student.present ? "Present" : "Mark"}
+              </button>
+            </li>
+          ))}
+        </ul>
 
-              {isBeaconActive && (
-                <p className="mt-4 text-green-600 font-semibold">
-                  📡 Faculty device is SIMULATING a Bluetooth Beacon…
-                </p>
-              )}
-            </div>
-          )}
-        </div>
+        <button
+          onClick={handleSubmit}
+          className="mt-4 w-full py-2.5 rounded-full text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 transition"
+        >
+          Submit Attendance
+        </button>
+      </section>
+
+      {/* QR Attendance */}
+      <section className="backdrop-blur-xl bg-white/70 border border-white/40 rounded-2xl shadow-lg p-5 text-center">
+  <h3 className="text-lg font-semibold mb-4 text-gray-800">
+    QR Attendance
+  </h3>
+
+  {!qrSession ? (
+    <button
+      onClick={startQR}
+      className="py-2.5 px-6 rounded-full text-sm font-semibold bg-green-600 text-white hover:bg-green-700 transition"
+    >
+      Start QR
+    </button>
+  ) : (
+    <div className="flex flex-col items-center space-y-3">
+      <p className="text-sm text-gray-700 font-medium">
+        Scan to mark attendance
+      </p>
+
+      {/* 🔹 Bigger QR */}
+      <div className="p-3 bg-white/50 rounded-2xl shadow-inner">
+        <QRCodeCanvas value={qrSession} size={240} />
       </div>
 
-      {/* 🔹 Chatbot Side Panel */}
-      {isChatOpen && (
-        <div className="fixed inset-y-0 right-0 w-1/3 bg-gradient-to-tl from-green-800 to-black z-40 transform transition-transform duration-300 ease-in-out border-l border-gray-700 overflow-y-auto p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold text-white">AI Chatbot</h2>
-            <button
-              onClick={() => setIsChatOpen(false)}
-              className="text-white text-lg hover:text-red-400"
-            >
-              ✕
-            </button>
-          </div>
-          <div className="text-white">
-            <p>Hello 👋 I’m your AI helper!</p>
-          </div>
-        </div>
-      )}
+      <p className="text-xs text-gray-500">
+        Refresh in <span className="font-semibold">{timeLeft}</span> sec
+      </p>
 
-      {/* 🔹 Floating Chatbot Button */}
-      <button
-        onClick={() => setIsChatOpen(true)}
-        className="fixed bottom-6 right-6 bg-green-600 text-white rounded-full shadow-lg p-4 hover:bg-green-700 transition z-50"
-      >
-        💬
-      </button>
+      {bluetoothAllowed && !bluetoothOn && (
+        <p className="text-xs text-yellow-600 font-medium">
+          ⚠️ Turn ON Bluetooth
+        </p>
+      )}
     </div>
-  );
+  )}
+</section>
+
+    </div>
+
+    {/* Chatbot Panel */}
+    {isChatOpen && (
+      <div className="fixed inset-y-0 right-0 w-80 bg-gradient-to-br from-gray-900 to-black z-50 shadow-2xl p-5">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-lg font-bold text-white">AI Chatbot</h2>
+          <button
+            onClick={() => setIsChatOpen(false)}
+            className="text-white text-lg hover:text-red-400"
+          >
+            ✕
+          </button>
+        </div>
+        <div className="text-white text-sm space-y-2">
+          <p>Hello 👋 I’m your AI helper!</p>
+        </div>
+      </div>
+    )}
+
+    {/* Floating Chatbot Button */}
+    <button
+      onClick={() => setIsChatOpen(true)}
+      className="fixed bottom-5 right-5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-full shadow-lg p-4 hover:scale-105 transition z-50"
+    >
+      💬
+    </button>
+  </div>
+);
+
+
+
 }
