@@ -127,9 +127,8 @@ export default function CreatePage() {
         room: item.room?.name || "--",
       };
     });
-
-    console.log("✅ Transformed timetable:", tt);
     setTimetable(tt);
+    console.log(timetable)
   } catch (error) {
     console.error("Error fetching timetable", error);
     setTimetable(null);
@@ -415,8 +414,11 @@ export default function CreatePage() {
           {loadingTimetable ? "Loading..." : "Edit Timetable"}
         </Button>
 
-        {/* Timetable Display */}
-        {timetable && (
+        
+  {/* Timetable Display */}
+{loadingTimetable ? (
+  <p className="text-center mt-4">⏳ Loading timetable...</p>
+) : timetable && Object.keys(timetable).length > 0  ? (
   <div className="overflow-x-auto">
     <table className="min-w-full border">
       <thead>
@@ -437,7 +439,6 @@ export default function CreatePage() {
 
         return (
           <tbody key={day}>
-            {/* Thick full-width line before each day (except the first) */}
             {dayIdx > 0 && (
               <tr>
                 <td colSpan={5} className="p-0">
@@ -464,7 +465,19 @@ export default function CreatePage() {
       })}
     </table>
   </div>
+) : (
+  <div className="mt-6 text-center">
+    <p className="text-gray-600 text-lg">❌ Timetable doesn’t exist for this department.</p>
+    <Button 
+      className="mt-3"
+      onClick={() => window.open(`/edit/${selectedDept}`, "_blank")}
+      disabled={!selectedDept}
+    >
+      Create Timetable
+    </Button>
+  </div>
 )}
+
 
       </div>
     </CardContent>

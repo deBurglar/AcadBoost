@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import axiosClient from "../lib/axiosClient";
 import { Scanner } from "@yudiel/react-qr-scanner"; 
 import HintAi from "../components/StudentPage/ChatAi";
-// import HintAi from "../components/StudentPage/ChatAi"; // Uncomment if you already have it
 
 // ==== Types ====
 interface Course {
@@ -10,17 +9,14 @@ interface Course {
   name: string;
   subjectcode: string;
 }
-
 interface Room {
   _id: string;
   name: string;
 }
-
 interface Faculty {
   _id: string;
   name: string;
 }
-
 interface RoutineEntry {
   _id: string;
   course: Course | null;
@@ -29,12 +25,10 @@ interface RoutineEntry {
   time: string;
   day: string;
 }
-
 interface Student {
   name: string;
   rollNumber: number;
 }
-
 interface RoutineData {
   student: Student;
   department: string;
@@ -42,7 +36,6 @@ interface RoutineData {
   routine: RoutineEntry[];
 }
 
-// ==== Component ====
 const StudentRoutine: React.FC = () => {
   const [routineData, setRoutineData] = useState<RoutineData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -53,6 +46,23 @@ const StudentRoutine: React.FC = () => {
 
   // Chatbot state
   const [isChatOpen, setIsChatOpen] = useState(false);
+
+  // === New: Local Editable Slots State ===
+  const [studentEdits, setStudentEdits] = useState<Record<string, string>>({});
+  const [editingSlot, setEditingSlot] = useState<string | null>(null);
+
+  // Load edits from localStorage on mount
+  useEffect(() => {
+    const stored = localStorage.getItem("studentEdits");
+    if (stored) {
+      setStudentEdits(JSON.parse(stored));
+    }
+  }, []);
+
+  // Persist edits to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem("studentEdits", JSON.stringify(studentEdits));
+  }, [studentEdits]);
 
   useEffect(() => {
     const fetchRoutine = async () => {
@@ -72,9 +82,7 @@ const StudentRoutine: React.FC = () => {
   // Handle QR Scan result
   const handleScan = async (result: string) => {
     if (!result) return;
-
     setScanning(false);
-
     try {
       await axiosClient.post("/attendance/mark", { qrData: result });
       alert("✅ Attendance marked successfully!");
@@ -100,15 +108,27 @@ const StudentRoutine: React.FC = () => {
 
   const timeToMinutes = (time: string): number => {
     const [hourStr, minuteStr] = time.split(":");
-    const hour = parseInt(hourStr, 10);
-    const minute = parseInt(minuteStr, 10);
-    return hour * 60 + minute;
+    return parseInt(hourStr, 10) * 60 + parseInt(minuteStr, 10);
   };
 
   // Sort each day's routine by time
   Object.keys(groupedByDay).forEach((day) => {
     groupedByDay[day].sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
   });
+
+  // === Handlers for custom activities ===
+  const handleSave = (slotId: string, value: string) => {
+    if (!value.trim()) return;
+    setStudentEdits((prev) => ({ ...prev, [slotId]: value }));
+    setEditingSlot(null);
+  };
+
+  const handleRemove = (slotId: string) => {
+    const newEdits = { ...studentEdits };
+    delete newEdits[slotId];
+    setStudentEdits(newEdits);
+    setEditingSlot(null);
+  };
 
   return (
     <div className="p-6">
@@ -135,17 +155,15 @@ const StudentRoutine: React.FC = () => {
         <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
           <div className="bg-white p-4 rounded-xl shadow-lg">
             <h3 className="text-lg font-semibold mb-2">Scan QR Code</h3>
-
             <Scanner
               onScan={(results) => {
                 if (results && results.length > 0) {
-                  handleScan(results[0].rawValue); // ✅ rawValue contains QR text
+                  handleScan(results[0].rawValue);
                 }
               }}
               onError={(error) => console.error(error)}
               styles={{ container: { width: "300px" } }}
             />
-
             <button
               onClick={() => setScanning(false)}
               className="mt-4 px-3 py-1 bg-red-500 text-white rounded-lg"
@@ -171,27 +189,72 @@ const StudentRoutine: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {groupedByDay[day].map((entry) => (
-                  <tr key={entry._id} className="border-b">
-                    <td className="p-2">{entry.time}</td>
-                    <td className="p-2">
-                      {entry.course ? (
-                        <>
-                          {entry.course.name}
-                          <span className="text-xs text-gray-500 ml-2">
-                            ({entry.course.subjectcode})
-                          </span>
-                        </>
-                      ) : (
-                        <span className="italic text-gray-400">Free Period</span>
-                      )}
-                    </td>
-                    <td className="p-2">
-                      {entry.faculty ? entry.faculty.name : "-"}
-                    </td>
-                    <td className="p-2">{entry.room ? entry.room.name : "-"}</td>
-                  </tr>
-                ))}
+                {groupedByDay[day].map((entry) => {
+                  const customActivity = studentEdits[entry._id];
+                  return (
+                    <tr key={entry._id} className="border-b">
+                      <td className="p-2">{entry.time}</td>
+                      <td className="p-2">
+                        {entry.course ? (
+                          <>
+                            {entry.course.name}
+                            <span className="text-xs text-gray-500 ml-2">
+                              ({entry.course.subjectcode})
+                            </span>
+                          </>
+                        ) : customActivity ? (
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{customActivity}</span>
+                            <button
+                              onClick={() => handleRemove(entry._id)}
+                              className="text-red-500 text-sm"
+                            >
+                              ✕ Remove
+                            </button>
+                          </div>
+                        ) : editingSlot === entry._id ? (
+                          <div className="flex gap-2">
+                            <input
+                              id={`input-${entry._id}`}
+                              type="text"
+                              placeholder="Enter activity"
+                              className="border p-1 rounded"
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  handleSave(entry._id, (e.target as HTMLInputElement).value);
+                                }
+                              }}
+                            />
+                            <button
+                              onClick={() =>
+                                handleSave(
+                                  entry._id,
+                                  (document.querySelector<HTMLInputElement>(
+                                    `#input-${entry._id}`
+                                  )?.value || "")
+                                )
+                              }
+                              className="bg-green-500 text-white px-2 rounded"
+                            >
+                              Save
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setEditingSlot(entry._id)}
+                            className="text-blue-500 text-sm"
+                          >
+                            + Add Activity
+                          </button>
+                        )}
+                      </td>
+                      <td className="p-2">
+                        {entry.faculty ? entry.faculty.name : "-"}
+                      </td>
+                      <td className="p-2">{entry.room ? entry.room.name : "-"}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -199,27 +262,25 @@ const StudentRoutine: React.FC = () => {
       </div>
 
       {/* Chatbot Side Panel */}
-     {isChatOpen && (
-  <div className="fixed bottom-20 right-6 w-[400px] h-[500px] z-[9999]">
-    <div className="bg-gray-900 rounded-2xl shadow-2xl border border-gray-700 relative h-full flex flex-col">
-      {/* Header */}
-      <div className="flex justify-between items-center p-3 border-b border-gray-700">
-        <h2 className="text-white font-semibold">AI Assistant</h2>
-        <button
-          onClick={() => setIsChatOpen(false)}
-          className="text-white hover:text-red-400 text-lg"
-        >
-          ✕
-        </button>
-      </div>
+      {isChatOpen && (
+        <div className="fixed bottom-20 right-6 w-[400px] h-[500px] z-[9999]">
+          <div className="bg-gray-900 rounded-2xl shadow-2xl border border-gray-700 relative h-full flex flex-col">
+            <div className="flex justify-between items-center p-3 border-b border-gray-700">
+              <h2 className="text-white font-semibold">AI Assistant</h2>
+              <button
+                onClick={() => setIsChatOpen(false)}
+                className="text-white hover:text-red-400 text-lg"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <HintAi />
+            </div>
+          </div>
+        </div>
+      )}
 
-      {/* Chat Component */}
-      <div className="flex-1 overflow-hidden">
-        <HintAi />
-      </div>
-    </div>
-  </div>
-)}
       {/* Floating Chatbot Button */}
       <button
         onClick={() => setIsChatOpen(true)}

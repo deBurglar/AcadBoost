@@ -5,8 +5,8 @@ import { Send, Bot, User, Sparkles, Zap } from 'lucide-react';
 
 function HintAi() {
     const [messages, setMessages] = useState([
-        { role: 'model', parts: [{ text: "Hi,I am here to help you out" }] },
         { role: 'user', parts: [{ text: "Hello" }] },
+        { role: 'model', parts: [{ text: "Hi,I am here to help you out" }] },
     ])
     const [isTyping, setIsTyping] = useState(false);
     const [inputFocused, setInputFocused] = useState(false);
@@ -18,13 +18,14 @@ function HintAi() {
     }, [messages]);
 
     const onSubmit = async (data) => {
-        setMessages(prev => [...prev, { role: 'user', parts: [{ text: data.message }] }]);
+        const newUserMessage = { role: 'user', parts: [{ text: data.message }] };
+        setMessages(prev => [...prev, newUserMessage]);
         reset();
         setIsTyping(true);
-
+        const newMessage = [...messages, newUserMessage];
         try {
             const response = await axiosClient.post("/student/chat", {
-                messages: messages,
+                messages: newMessage,
             });
 
             // Simulate typing delay for better UX

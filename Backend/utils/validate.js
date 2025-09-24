@@ -12,7 +12,7 @@ const validate = (data)=>{
         throw new Error("Invalid Email");
 }catch(err)
 {
-    res.send("error"+err.message)
+    res.send("error(validate.js): "+err.message)
 }
 }
 

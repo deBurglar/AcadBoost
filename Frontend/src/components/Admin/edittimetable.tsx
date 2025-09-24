@@ -254,139 +254,218 @@ const EditTimeTable = () => {
     );
   }
 
- return (
-  <div className="p-6 bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
-    {/* Header */}
-    <div className="flex items-center justify-between mb-6">
-      <h1 className="text-3xl font-extrabold text-gray-800 tracking-tight">
-        Edit Timetable – {department?.name || deptId}
-      </h1>
-      <Button
-        variant="secondary"
-        onClick={regenerateTimetable}
-        className="gap-2 shadow-sm hover:shadow-md transition-all duration-200"
-      >
-        🔄 Regenerate
-      </Button>
+  return (
+    <div className="p-6">
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-2xl font-bold">Edit Timetable – {department?.name || deptId}</h1>
+        <Button variant="secondary" onClick={regenerateTimetable}>
+          🔄 Regenerate Timetable
+        </Button>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="table-auto border-collapse border w-full">
+          <thead>
+            <tr>
+              <th className="border p-2">Time</th>
+              {days.map((day) => (
+                <th key={day} className="border p-2">
+                  {day}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {timeSlots.map((time) => (
+              <tr key={time}>
+                <td className="border p-2 font-semibold">{time}</td>
+                {days.map((day) => {
+                  const cellSlots = timetable.filter((s) => s.day === day && s.time === time);
+                  const slot = cellSlots.find((s) => s.course) || cellSlots[0];
+
+                  const isEditing = editingCell && editingCell.day === day && editingCell.time === time;
+
+                  return (
+                    <td key={day + time} className="border p-2 align-top min-w-[220px]">
+                      {slot && slot.course ? (
+                        <div className="space-y-2">
+                          <div className="font-bold text-sm">{slot.course.name}</div>
+                          <div className="text-xs text-gray-500">{slot.course.subjectcode}</div>
+
+                          {/* Faculty dropdown */}
+                          <Select value={slot.faculty?._id || ""} onValueChange={(val) => updateSlot(slot._id, "faculty", val)}>
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Faculty" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {faculties.map((f) => (
+                                <SelectItem key={f._id} value={f._id}>
+                                  {f.facultyProfile?.shortName} – {f.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+
+                          {/* Room dropdown */}
+                          <Select value={slot.room?._id || ""} onValueChange={(val) => updateSlot(slot._id, "room", val)}>
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Room" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {rooms.map((r) => (
+                                <SelectItem key={r._id} value={r._id}>
+                                  {r.name} ({r.building})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+
+                          {/* Remove slot */}
+                          <Button variant="destructive" size="sm" onClick={() => removeSlot(slot._id)}>
+                            Remove
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center">
+                          {!isEditing ? (
+                            <>
+                              <span className="text-gray-400 italic">Free</span>
+                              <div className="flex gap-2 mt-2">
+                                <Button size="sm" variant="outline" onClick={() => setEditingCell({ day, time })}>
+                                  ➕ Add Course
+                                </Button>
+                              </div>
+                            </>
+                          ) : (
+                            <div className="space-y-2 w-full">
+                              {/* Inline Add Course Form */}
+                              <div>
+                                <label className="text-xs">Course</label>
+                                <Select
+                                  value={tempSelection.courseId || ""}
+                                  onValueChange={(val) => setTempSelection((p) => ({ ...p, courseId: val }))}
+                                >
+                                  <SelectTrigger className="w-full">
+                                    <SelectValue placeholder="Select course or choose Manual" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {departmentCourses.map((c) => (
+                                      <SelectItem key={c._id} value={c._id}>
+                                        {c.name} — {c.subjectcode}
+                                      </SelectItem>
+                                    ))}
+                                    <SelectItem value="manual">Manual Course</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                {/* If user chose manual, allow text input */}
+                                {tempSelection.courseId === "manual" && (
+                                  <div className="mt-1 space-y-1">
+                                    <input
+                                      className="block w-full border rounded p-1 text-sm"
+                                      placeholder="Course name (e.g. Advanced Maths)"
+                                      onChange={(e) => setTempSelection((p) => ({ ...p, manualCourseName: e.target.value }))}
+                                    />
+                                    <input
+                                      className="block w-full border rounded p-1 text-sm"
+                                      placeholder="Subject code (e.g. MTH3001)"
+                                      onChange={(e) => setTempSelection((p) => ({ ...p, manualSubjectcode: e.target.value }))}
+                                    />
+                                  </div>
+                                )}
+                              </div>
+
+                              <div>
+                                <label className="text-xs">Faculty</label>
+                                <Select
+                                  value={tempSelection.facultyId || ""}
+                                  onValueChange={(val) => setTempSelection((p) => ({ ...p, facultyId: val }))}
+                                >
+                                  <SelectTrigger className="w-full">
+                                    <SelectValue placeholder="Select faculty" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {faculties.map((f) => (
+                                      <SelectItem key={f._id} value={f._id}>
+                                        {f.facultyProfile?.shortName} — {f.name}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+
+                              <div>
+                                <label className="text-xs">Room</label>
+                                <Select
+                                  value={tempSelection.roomId || ""}
+                                  onValueChange={(val) => setTempSelection((p) => ({ ...p, roomId: val }))}
+                                >
+                                  <SelectTrigger className="w-full">
+                                    <SelectValue placeholder="Select room" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {rooms.map((r) => (
+                                      <SelectItem key={r._id} value={r._id}>
+                                        {r.name} ({r.building})
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  onClick={() => {
+                                    // if manual course chosen, create a fake course object inline
+                                    if (tempSelection.courseId === "manual") {
+                                      const manualCourse = {
+                                        name: (tempSelection.manualCourseName || "New Course").trim(),
+                                        subjectcode: (tempSelection.manualSubjectcode || "TBA").toString().trim(),
+                                      };
+                                      addSlot(day, time, {
+                                        courseObj: manualCourse,
+                                        facultyId: tempSelection.facultyId,
+                                        roomId: tempSelection.roomId,
+                                      });
+                                      return;
+                                    }
+
+                                    // normal flow: use selected course id
+                                    addSlot(day, time, {
+                                      courseId: tempSelection.courseId,
+                                      facultyId: tempSelection.facultyId,
+                                      roomId: tempSelection.roomId,
+                                    });
+                                  }}
+                                >
+                                  Add
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={() => {
+                                  setEditingCell(null);
+                                  setTempSelection({});
+                                }}>
+                                  Cancel
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="mt-6 space-x-4">
+        <Button onClick={checkconflict}>Check Conflict</Button>
+        <Button onClick={saveChanges}>Save Changes</Button>
+      </div>
     </div>
-
-    {/* Table */}
-    <div className="overflow-x-auto rounded-xl shadow-lg border border-gray-200 bg-white">
-  <table className="table-auto border-collapse w-full text-sm">
-    <thead className="bg-gray-100 text-gray-700 uppercase text-xs tracking-wide">
-      <tr>
-        <th className="border border-gray-200 p-3 text-left w-[120px]">Day</th>
-        {timeSlots.map((time) => (
-          <th key={time} className="border border-gray-200 p-3 text-center">
-            {time}
-          </th>
-        ))}
-      </tr>
-    </thead>
-    <tbody>
-      {days.map((day) => (
-        <tr key={day} className="hover:bg-gray-50 transition-colors">
-          <td className="border border-gray-200 p-3 font-semibold text-gray-800">{day}</td>
-          {timeSlots.map((time) => {
-            const cellSlots = timetable.filter((s) => s.day === day && s.time === time);
-            const slot = cellSlots.find((s) => s.course) || cellSlots[0];
-            const isEditing = editingCell && editingCell.day === day && editingCell.time === time;
-
-            return (
-              <td key={day + time} className="border border-gray-200 p-3 align-top min-w-[250px]">
-                {slot && slot.course ? (
-                  <div className="space-y-2">
-                    <div className="font-semibold text-gray-900 text-base">
-                      {slot.course.name}
-                    </div>
-                    <div className="text-xs text-gray-500">{slot.course.subjectcode}</div>
-
-                    {/* Faculty dropdown */}
-                    <Select value={slot.faculty?._id || ""} onValueChange={(val) => updateSlot(slot._id, "faculty", val)}>
-                      <SelectTrigger className="w-full bg-gray-50">
-                        <SelectValue placeholder="Faculty" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {faculties.map((f) => (
-                          <SelectItem key={f._id} value={f._id}>
-                            {f.facultyProfile?.shortName} – {f.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-
-                    {/* Room dropdown */}
-                    <Select value={slot.room?._id || ""} onValueChange={(val) => updateSlot(slot._id, "room", val)}>
-                      <SelectTrigger className="w-full bg-gray-50">
-                        <SelectValue placeholder="Room" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {rooms.map((r) => (
-                          <SelectItem key={r._id} value={r._id}>
-                            {r.name} ({r.building})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-
-                    {/* Updated softer remove button */}
-                    <Button
-                      className="bg-red-100 text-red-700 hover:bg-red-200"
-                      size="sm"
-                      onClick={() => removeSlot(slot._id)}
-                    >
-                      Remove
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center">
-                    {!isEditing ? (
-                      <>
-                        <span className="text-gray-400 italic text-sm">Free</span>
-                        <Button
-                          size="sm"
-                          className="bg-green-100 text-green-700 hover:bg-green-200 border border-green-300 mt-2 w-full"
-                          onClick={() => setEditingCell({ day, time })}
-                        >
-                          ➕ Add Course
-                        </Button>
-                      </>
-                    ) : (
-                      // ... same inline add form logic as before
-                      <div className="space-y-2 w-full">
-                        {/* Add form content unchanged */}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </td>
-            );
-          })}
-        </tr>
-      ))}
-    </tbody>
-  </table>
-</div>
-
-
-    {/* Bottom buttons */}
-    <div className="mt-6 flex gap-4">
-      <Button
-        onClick={checkconflict}
-        className="px-6 py-2 shadow-sm hover:shadow-md transition-all duration-200"
-      >
-        Check Conflict
-      </Button>
-      <Button
-        onClick={saveChanges}
-        className="px-6 py-2 shadow-sm hover:shadow-md transition-all duration-200"
-      >
-        Save Changes
-      </Button>
-    </div>
-  </div>
-);
-
+  );
 };
 
 export default EditTimeTable;

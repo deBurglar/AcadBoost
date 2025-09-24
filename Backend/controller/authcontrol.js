@@ -65,8 +65,8 @@ const register = async (req, res) => {
         });
 
     } catch (err) {
-        res.send("Error: " + err.message);
-        console.log(err.message);
+        res.send("Error(register): " + err.message);
+        console.log(err);
     }
 };
 
