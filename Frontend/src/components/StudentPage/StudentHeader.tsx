@@ -3,14 +3,14 @@ import { Button } from "../ui/button";
 import { logoutUser } from "../../authSlice";
 import { useSelector, useDispatch } from "react-redux";
 import type { RootState, AppDispatch } from "../../../store/store";
-import { markAsRead } from "../../notificationslice";
-import { useState } from "react";
+// import { markAsRead } from "../../notificationslice";
+// import { useState } from "react";
 
 export default function StudentHeader() {
   const dispatch = useDispatch<AppDispatch>();
   const user = useSelector((state: RootState) => state.auth.user);
-  const notifications = useSelector((state: RootState) => state.notifications.items);
-  const [open, setOpen] = useState(false);
+  // const notifications = useSelector((state: RootState) => state.notifications.items);
+  // const [open, setOpen] = useState(false);
 
   const handleLogout = () => {
     dispatch(logoutUser());
@@ -32,7 +32,7 @@ export default function StudentHeader() {
 
           <div className="flex items-center space-x-4 relative">
             {/* Notification bell */}
-            <button
+            {/* <button
               onClick={() => setOpen(!open)}
               className="relative p-2 rounded-full hover:bg-gray-100"
             >
@@ -64,7 +64,7 @@ export default function StudentHeader() {
                   ))
                 )}
               </div>
-            )}
+            )} */}
 
             <Button variant="ghost">{user.name}</Button>
             <Button
