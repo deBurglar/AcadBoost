@@ -449,40 +449,40 @@ const publishRoutine = async (req, res) => {
 
     if (!updated) return res.status(404).json({ message: "Department not found" });
 
-     // ------------ 🔔 Send push notifications (BEFORE response) ------------
-    // (Optional) If you have a way to target only that department's users,
-    // replace this with a filtered query.
-    const subscriptions = await PushSubscription.find();
-    console.log(subscriptions)
-    const payload = JSON.stringify({
-      title: "New Timetable Published 📅",
-      body: "The timetable for your department has been updated.",
-      // Service worker can open this on click:
-      url: `/department/${deptId}/routine`,
-      // Optional extras your SW can use:
-      icon: "/icons/icon-192.png",
-      badge: "/icons/badge-72.png",
-      tag: `dept-${deptId}-routine` // helps replace older notifications
-    });
+    //  // ------------ 🔔 Send push notifications (BEFORE response) ------------
+    // // (Optional) If you have a way to target only that department's users,
+    // // replace this with a filtered query.
+    // const subscriptions = await PushSubscription.find();
+    // console.log(subscriptions)
+    // const payload = JSON.stringify({
+    //   title: "New Timetable Published 📅",
+    //   body: "The timetable for your department has been updated.",
+    //   // Service worker can open this on click:
+    //   url: `/department/${deptId}/routine`,
+    //   // Optional extras your SW can use:
+    //   icon: "/icons/icon-192.png",
+    //   badge: "/icons/badge-72.png",
+    //   tag: `dept-${deptId}-routine` // helps replace older notifications
+    // });
 
-    const results = await Promise.allSettled(
-      subscriptions.map(sub => webPush.sendNotification(sub, payload))
-    );
+    // const results = await Promise.allSettled(
+    //   subscriptions.map(sub => webPush.sendNotification(sub, payload))
+    // );
 
-    // Clean up gone endpoints (410/404)
-    const toDelete = [];
-    results.forEach((r, i) => {
-      if (r.status === "rejected") {
-        const err = r.reason;
-        console.error("Push error:", err?.body || err);
-        if (err?.statusCode === 410 || err?.statusCode === 404) {
-          toDelete.push(subscriptions[i].endpoint);
-        }
-      }
-    });
-    if (toDelete.length) {
-      await PushSubscription.deleteMany({ endpoint: { $in: toDelete } });
-    }
+    // // Clean up gone endpoints (410/404)
+    // const toDelete = [];
+    // results.forEach((r, i) => {
+    //   if (r.status === "rejected") {
+    //     const err = r.reason;
+    //     console.error("Push error:", err?.body || err);
+    //     if (err?.statusCode === 410 || err?.statusCode === 404) {
+    //       toDelete.push(subscriptions[i].endpoint);
+    //     }
+    //   }
+    // });
+    // if (toDelete.length) {
+    //   await PushSubscription.deleteMany({ endpoint: { $in: toDelete } });
+    // }
     // ------------ 🔔 Done --------------------------------------------------
 
     res.status(200).json({
